@@ -9,10 +9,11 @@ import com.aktor.core.model.RowMappingContext;
 import com.aktor.core.model.ValueConverter;
 import com.aktor.core.util.RecordTypeUtil;
 
+import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Objects;
 
-public class Mapper<Item extends java.lang.Record & Data<Key>, Key>
+public class Mapper<Item extends Data<Key>, Key>
 implements Converter<Map<String, String>, Item>
 {
     private static final String LOGICAL_KEY_FIELD_NAME = "key";
@@ -90,11 +91,6 @@ implements Converter<Map<String, String>, Item>
         this(FieldResolver.mapped(itemType), itemType);
     }
 
-    public FieldResolver resolver()
-    {
-        return resolver;
-    }
-
     @Override
     public final Item convert(final Map<String, String> map) throws ConversionException
     {
@@ -152,6 +148,13 @@ implements Converter<Map<String, String>, Item>
     {
         try
         {
+            final Method keyMethod = itemType.getMethod(LOGICAL_KEY_FIELD_NAME);
+            final Class<?> methodType = keyMethod.getReturnType();
+            if (!Void.TYPE.equals(methodType))
+            {
+                return (Class<Key>) methodType;
+            }
+
             final RecordTypePlan plan = RecordTypePlan.of(itemType);
             final int keyIndex = plan.keyComponentIndex();
             if (keyIndex < 0)
@@ -160,7 +163,7 @@ implements Converter<Map<String, String>, Item>
             }
             return (Class<Key>) plan.componentType(keyIndex);
         }
-        catch (final ConversionException exception)
+        catch (final NoSuchMethodException | ConversionException exception)
         {
             throw new IllegalArgumentException("Unable to resolve key type for: " + itemType.getName(), exception);
         }

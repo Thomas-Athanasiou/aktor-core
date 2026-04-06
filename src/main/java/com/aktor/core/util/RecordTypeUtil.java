@@ -6,6 +6,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Parameter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -188,7 +189,30 @@ public final class RecordTypeUtil
 
     public static String[] getFallbackComponentNames(final Class<?> type)
     {
-        return Arrays.stream(Objects.requireNonNull(type).getDeclaredFields())
+        final Constructor<?>[] constructors = Objects.requireNonNull(type).getDeclaredConstructors();
+        Constructor<?> bestConstructor = null;
+        for (final Constructor<?> constructor : constructors)
+        {
+            if (bestConstructor == null
+                || constructor.getParameterTypes().length > bestConstructor.getParameterTypes().length)
+            {
+                bestConstructor = constructor;
+            }
+        }
+        if (bestConstructor != null)
+        {
+            final Parameter[] parameters = bestConstructor.getParameters();
+            final boolean parameterNamesPresent = parameters.length > 0
+                && Arrays.stream(parameters).allMatch(Parameter::isNamePresent);
+            if (parameterNamesPresent)
+            {
+                return Arrays.stream(parameters)
+                    .map(Parameter::getName)
+                    .toArray(String[]::new);
+            }
+        }
+
+        return Arrays.stream(type.getDeclaredFields())
             .filter(field -> !Modifier.isStatic(field.getModifiers()))
             .filter(field -> !field.isSynthetic())
             .map(Field::getName)

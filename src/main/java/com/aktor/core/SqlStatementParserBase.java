@@ -2,7 +2,7 @@ package com.aktor.core;
 
 import java.util.Objects;
 
-abstract class SqlStatementParserBase
+class SqlStatementParserBase
 {
     protected final String table;
     protected final String start;

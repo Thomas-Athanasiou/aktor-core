@@ -8,16 +8,14 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.IntSupplier;
 
-public class RepositoryRotating<Item extends Data<Key>, Key>
+public final class RepositoryRotating<Item extends Data<Key>, Key>
 extends RepositoryWrapper<Item, Key>
 {
     private static final FilterGroup[] NO_FILTERS = new FilterGroup[0];
 
+    private final SortOrder[] sortOrders;
+
     private final IntSupplier maxItemsSupplier;
-
-    private final String rotationField;
-
-    private final boolean rotationDirection;
 
     public RepositoryRotating(
         final Repository<Item, Key> repository,
@@ -28,8 +26,10 @@ extends RepositoryWrapper<Item, Key>
     {
         super(repository);
         this.maxItemsSupplier = Objects.requireNonNull(maxItemsSupplier);
-        this.rotationField = Objects.requireNonNull(rotationField);
-        this.rotationDirection = rotationDirection;
+        this.sortOrders = new SortOrder[]
+        {
+            new SortOrder(Objects.requireNonNull(rotationField), !rotationDirection)
+        };
     }
 
     @Override
@@ -46,25 +46,13 @@ extends RepositoryWrapper<Item, Key>
         {
             try
             {
-                final int totalCount = super.search(
-                    new SearchCriteria(NO_FILTERS, 1, 1, new SortOrder[]{new SortOrder(this.rotationField, !this.rotationDirection)})
-                ).totalCount();
-
+                final int totalCount = super.search(new SearchCriteria(NO_FILTERS, 1, 1, sortOrders)).totalCount();
                 final int overflow = totalCount - maxItems;
                 if (overflow >= 1)
                 {
-                    final List<Item> oldest = super.search(
-                        new SearchCriteria(
-                            NO_FILTERS,
-                            overflow,
-                            1,
-                            new SortOrder[]{new SortOrder(this.rotationField, this.rotationDirection)}
-                        )
-                    ).items();
-
-                    for (final Item oldestItem : oldest)
+                    for (final Item item : super.search(new SearchCriteria(NO_FILTERS, overflow, 1, sortOrders)).items())
                     {
-                        super.delete(oldestItem);
+                        super.delete(item);
                     }
                 }
             }

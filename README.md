@@ -30,6 +30,7 @@ It defines:
 
 The main goal is simple:
 
+- keep the framework simple to understand and use
 - keep the domain model independent from storage details
 - let repositories stay generic
 - let relations be described once and synchronized consistently

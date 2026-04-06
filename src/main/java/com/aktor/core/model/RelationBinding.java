@@ -18,12 +18,14 @@ public record RelationBinding<MainKey, ForeignKey, ForeignData extends Data<Fore
     BiFunction<MainKey, ForeignKey, Relation<MainKey, ForeignKey>> relationFactory,
     String mainField,
     String foreignField,
+    RelationSavePolicy savePolicy,
     RelationDeletePolicy deletePolicy
 )
 implements Model
 {
     private static final String DEFAULT_MAIN_FIELD = "main_key";
     private static final String DEFAULT_FOREIGN_FIELD = "foreign_key";
+    private static final RelationSavePolicy DEFAULT_SAVE_POLICY = RelationSavePolicy.CASCADE;
     private static final RelationDeletePolicy DEFAULT_DELETE_POLICY = RelationDeletePolicy.CASCADE;
 
     public RelationBinding(
@@ -42,6 +44,7 @@ implements Model
             relationFactory,
             DEFAULT_MAIN_FIELD,
             DEFAULT_FOREIGN_FIELD,
+            DEFAULT_SAVE_POLICY,
             DEFAULT_DELETE_POLICY
         );
     }
@@ -64,6 +67,7 @@ implements Model
             relationFactory,
             mainField,
             foreignField,
+            DEFAULT_SAVE_POLICY,
             DEFAULT_DELETE_POLICY
         );
     }
@@ -87,6 +91,7 @@ implements Model
             relationFactory,
             mainField,
             foreignField,
+            DEFAULT_SAVE_POLICY,
             deletePolicy
         );
     }
@@ -107,6 +112,7 @@ implements Model
             relationFactory,
             DEFAULT_MAIN_FIELD,
             DEFAULT_FOREIGN_FIELD,
+            DEFAULT_SAVE_POLICY,
             DEFAULT_DELETE_POLICY
         );
     }
@@ -129,7 +135,31 @@ implements Model
             relationFactory,
             mainField,
             foreignField,
+            DEFAULT_SAVE_POLICY,
             DEFAULT_DELETE_POLICY
+        );
+    }
+
+    public RelationBinding(
+        final String field,
+        final Class<ForeignData> foreignType,
+        final Management<ForeignData, ForeignKey> foreignManagement,
+        final Repository<Relation<MainKey, ForeignKey>, String> relationRepository,
+        final BiFunction<MainKey, ForeignKey, Relation<MainKey, ForeignKey>> relationFactory,
+        final RelationSavePolicy savePolicy,
+        final RelationDeletePolicy deletePolicy
+    )
+    {
+        this(
+            field,
+            foreignType,
+            foreignManagement,
+            relationRepository,
+            relationFactory,
+            DEFAULT_MAIN_FIELD,
+            DEFAULT_FOREIGN_FIELD,
+            savePolicy,
+            deletePolicy
         );
     }
 
@@ -150,7 +180,32 @@ implements Model
             relationFactory,
             DEFAULT_MAIN_FIELD,
             DEFAULT_FOREIGN_FIELD,
+            DEFAULT_SAVE_POLICY,
             deletePolicy
+        );
+    }
+
+    public RelationBinding(
+        final String field,
+        final Class<ForeignData> foreignType,
+        final Management<ForeignData, ForeignKey> foreignManagement,
+        final Repository<Relation<MainKey, ForeignKey>, String> relationRepository,
+        final BiFunction<MainKey, ForeignKey, Relation<MainKey, ForeignKey>> relationFactory,
+        final String mainField,
+        final String foreignField,
+        final RelationSavePolicy savePolicy
+    )
+    {
+        this(
+            field,
+            foreignType,
+            foreignManagement,
+            relationRepository,
+            relationFactory,
+            mainField,
+            foreignField,
+            savePolicy,
+            DEFAULT_DELETE_POLICY
         );
     }
 
@@ -163,6 +218,7 @@ implements Model
         relationFactory = Objects.requireNonNull(relationFactory);
         mainField = requireField(Objects.requireNonNull(mainField));
         foreignField = requireField(Objects.requireNonNull(foreignField));
+        savePolicy = Objects.requireNonNull(savePolicy);
         deletePolicy = Objects.requireNonNull(deletePolicy);
     }
 

@@ -88,7 +88,14 @@ implements Model, TransactionParticipant
                     }
                     else
                     {
-                        relationProvider.save(item.key(), value);
+                        try (RelationTraversalGuard.Scope ignored = RelationTraversalGuard.enterSave(
+                            itemType,
+                            item.key(),
+                            metadata.name()
+                        ))
+                        {
+                            relationProvider.save(item.key(), value);
+                        }
                     }
                 }
                 catch (final ReflectiveOperationException exception)
@@ -223,7 +230,7 @@ implements Model, TransactionParticipant
                 final Class<?> componentType = component.type();
                 metadata.add(
                     new AccessorMetadata(
-                        RecordComponentFieldNameResolver.DEFAULT.resolve(component.name()),
+                        FieldNormalizer.DEFAULT.resolve(component.name()),
                         isRelationType(componentType),
                         accessor::invoke
                     )
@@ -246,7 +253,7 @@ implements Model, TransactionParticipant
         {
             metadata.add(
                 new AccessorMetadata(
-                    RecordComponentFieldNameResolver.DEFAULT.resolve(method.getName()),
+                    FieldNormalizer.DEFAULT.resolve(method.getName()),
                     isRelationType(method.getReturnType()),
                     method::invoke
                 )
@@ -417,7 +424,7 @@ implements Model, TransactionParticipant
             {
                 throw new IllegalArgumentException("Use a record component method reference, for example: MyRecord::component");
             }
-            return requireField(RecordComponentFieldNameResolver.DEFAULT.resolve(methodName));
+            return requireField(FieldNormalizer.DEFAULT.resolve(methodName));
         }
 
         private static String extractAccessorMethodName(final RecordAccessor<?, ?> componentAccessor)

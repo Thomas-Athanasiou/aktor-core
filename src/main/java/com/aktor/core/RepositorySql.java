@@ -98,7 +98,7 @@ implements Repository<Item, Key>, TransactionParticipant
 
     public RepositorySql(
         final Connection connection,
-        final Class<? extends Data<?>> type,
+        final Class<Item> type,
         final String tableName,
         final String driverName
     )
@@ -108,7 +108,7 @@ implements Repository<Item, Key>, TransactionParticipant
 
     public RepositorySql(
         final Connection connection,
-        final Class<? extends Data<?>> type,
+        final Class<Item> type,
         final String tableName,
         final RelationProviderResolver<Key> relationProviderResolver,
         final String driverName
@@ -119,7 +119,7 @@ implements Repository<Item, Key>, TransactionParticipant
 
     public RepositorySql(
         final Connection connection,
-        final Class<? extends Data<?>> type,
+        final Class<Item> type,
         final String tableName,
         final FieldResolver fieldResolver,
         final String driverName
@@ -130,7 +130,7 @@ implements Repository<Item, Key>, TransactionParticipant
 
     public RepositorySql(
         final Connection connection,
-        final Class<? extends Data<?>> type,
+        final Class<Item> type,
         final String tableName,
         final FieldResolver fieldResolver,
         final RelationProviderResolver<Key> relationProviderResolver,
@@ -184,7 +184,7 @@ implements Repository<Item, Key>, TransactionParticipant
         return new SqlParsersFactory<Item, Key>(type, tableName, driverName, FieldResolver.mapped(type)).create();
     }
 
-    private static <Item extends java.lang.Record & Data<Key>, Key> SqlParsers<Item, Key> createSqlParsers(
+    private static <Item extends Record & Data<Key>, Key> SqlParsers<Item, Key> createSqlParsers(
         final Class<? extends Data<?>> type,
         final String tableName,
         final String driverName,
@@ -194,15 +194,14 @@ implements Repository<Item, Key>, TransactionParticipant
         return new SqlParsersFactory<Item, Key>(type, tableName, driverName, fieldResolver).create();
     }
 
-    private static <Item extends java.lang.Record & Data<Key>, Key> Converter<ResultSet, Item> createResultSetParser(
-        final Class<? extends Data<?>> type,
+    private static <Item extends Record & Data<Key>, Key> Converter<ResultSet, Item> createResultSetParser(
+        final Class<Item> type,
         final FieldResolver fieldResolver,
         final RelationProviderResolver<Key> relationProviderResolver
     )
     {
-        @SuppressWarnings("unchecked")
-        final Class<? extends Data<Key>> typed = (Class<? extends Data<Key>>) type;
-        return new DataParserResultSet<>(new Mapper<>(fieldResolver, relationProviderResolver, typed));
+        final Mapper<Item, Key> mapper = new Mapper<>(fieldResolver, relationProviderResolver, type);
+        return new DataParserResultSet<>(mapper);
     }
 
     record SqlParsers<Item extends Record & Data<Key>, Key>(
@@ -234,7 +233,7 @@ implements Repository<Item, Key>, TransactionParticipant
 
         private final com.aktor.core.model.SqlDialect sqlDialect;
 
-        private final com.aktor.core.model.FieldResolver fieldResolver;
+        private final FieldResolver fieldResolver;
 
         private SqlParsersFactory(
             final Class<? extends Data<?>> type,
@@ -307,7 +306,7 @@ implements Repository<Item, Key>, TransactionParticipant
                 {
                     final PreparedStatement statement = getCachedGetStatement();
                     statement.clearParameters();
-                    bindKeyParameters(statement, 1, key);
+                    bindKeyParameters(statement, key);
                     try (final ResultSet resultSet = statement.executeQuery())
                     {
                         if (resultSet.next())
@@ -332,7 +331,7 @@ implements Repository<Item, Key>, TransactionParticipant
         {
             try (final PreparedStatement statement = connection.prepareStatement(getSerializer.convert(key)))
             {
-                bindKeyParameters(statement, 1, key);
+                bindKeyParameters(statement, key);
                 try (final ResultSet resultSet = statement.executeQuery())
                 {
                     if (resultSet.next())
@@ -459,7 +458,7 @@ implements Repository<Item, Key>, TransactionParticipant
                         final PreparedStatement statement = getCachedDeleteStatement();
                         statement.clearParameters();
                         ensureSchema();
-                        bindKeyParameters(statement, 1, item.key());
+                        bindKeyParameters(statement, item.key());
                         statement.executeUpdate();
                     }
                     else
@@ -467,7 +466,7 @@ implements Repository<Item, Key>, TransactionParticipant
                         try (final PreparedStatement statement = connection.prepareStatement(deleteSerializer.convert(item.key())))
                         {
                             ensureSchema();
-                            bindKeyParameters(statement, 1, item.key());
+                            bindKeyParameters(statement, item.key());
                             statement.executeUpdate();
                         }
                     }
@@ -649,10 +648,10 @@ implements Repository<Item, Key>, TransactionParticipant
         }
     }
 
-    private void bindKeyParameters(final PreparedStatement statement, final int parameterIndex, final Key key)
+    private void bindKeyParameters(final PreparedStatement statement, final Key key)
     throws SQLException, ConversionException
     {
-        bindKeyParameters(statement, parameterIndex, key, identity::bindKeyParameters);
+        bindKeyParameters(statement, 1, key, identity::bindKeyParameters);
     }
 
     private void bindKeyParameters(

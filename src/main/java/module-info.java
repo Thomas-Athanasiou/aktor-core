@@ -1,4 +1,6 @@
 module com.aktor.core {
+    uses RepositoryFactoryLoader;
+    uses RepositoryFactoryLoader;
     requires java.sql;
     exports com.aktor.core.data;
     exports com.aktor.core.model;

@@ -3,9 +3,9 @@ package com.aktor.core.model;
 import com.aktor.core.util.SimpleDataObjectConverter;
 
 @FunctionalInterface
-public interface FieldNameNormalizer
+public interface FieldNormalizer
 {
-    FieldNameNormalizer DEFAULT = SimpleDataObjectConverter::camelToSnake;
+    FieldNormalizer DEFAULT = SimpleDataObjectConverter::camelToSnake;
 
     String resolve(String componentName);
 }

@@ -1,6 +1,6 @@
 package com.aktor.core;
 import com.aktor.core.exception.ConversionException;
-import com.aktor.core.model.RecordComponentFieldNameResolver;
+import com.aktor.core.model.FieldNormalizer;
 import com.aktor.core.util.RecordTypeUtil;
 import com.aktor.core.util.SimpleDataObjectConverter;
 
@@ -23,7 +23,7 @@ implements Converter<Class<? extends Data<?>>, String>
 
     private final String end;
 
-    private final RecordComponentFieldNameResolver fieldNameResolver;
+    private final FieldNormalizer fieldNameResolver;
 
     public ClassSqlSchemaParser(
         final String tableName,
@@ -32,7 +32,7 @@ implements Converter<Class<? extends Data<?>>, String>
         final String end
     )
     {
-        this(tableName, keyFieldName, start, end, RecordComponentFieldNameResolver.DEFAULT);
+        this(tableName, keyFieldName, start, end, FieldNormalizer.DEFAULT);
     }
 
     public ClassSqlSchemaParser(
@@ -40,7 +40,7 @@ implements Converter<Class<? extends Data<?>>, String>
         final String keyFieldName,
         final String start,
         final String end,
-        final RecordComponentFieldNameResolver fieldNameResolver
+        final FieldNormalizer fieldNameResolver
     )
     {
         super();
@@ -63,7 +63,7 @@ implements Converter<Class<? extends Data<?>>, String>
         try
         {
             final RecordTypeUtil.ComponentDescriptor[] components = RecordTypeUtil.getRecordComponents(input);
-            if (components != null && components.length > 0)
+            if (components.length > 0)
             {
                 Arrays.stream(components).forEach(
                     component -> {
@@ -161,7 +161,7 @@ implements Converter<Class<? extends Data<?>>, String>
         {
             final Method keyMethod = type.getMethod("key");
             final Class<?> keyType = keyMethod.getReturnType();
-            return keyType == null || Void.TYPE.equals(keyType) ? String.class : keyType;
+            return Void.TYPE.equals(keyType) ? String.class : keyType;
         }
         catch (final NoSuchMethodException exception)
         {

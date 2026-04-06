@@ -1,8 +1,7 @@
 package com.aktor.core;
 
 import com.aktor.core.exception.ConversionException;
-import com.aktor.core.model.FieldResolver;
-import com.aktor.core.model.RecordComponentFieldNameResolver;
+import com.aktor.core.model.FieldNormalizer;
 import com.aktor.core.model.RecordTypePlan;
 import com.aktor.core.util.SimpleDataObjectConverter;
 
@@ -13,24 +12,24 @@ implements Converter<Item, DataRow>
 {
     private static final Value[] VALUES = new Value[0];
 
-    private final RecordComponentFieldNameResolver fieldNameResolver;
+    private final FieldNormalizer fieldNameResolver;
 
     public DataRowMapper()
     {
-        this(RecordComponentFieldNameResolver.DEFAULT);
+        this(FieldNormalizer.DEFAULT);
     }
 
-    public DataRowMapper(final FieldResolver fieldResolver)
+    public DataRowMapper(final FieldNormalizer fieldResolver)
     {
-        this((RecordComponentFieldNameResolver) fieldResolver);
+        this((FieldNormalizer) fieldResolver);
     }
 
     public DataRowMapper(final Class<? extends Data<?>> type)
     {
-        this(FieldResolver.mapped(type));
+        this(FieldNormalizer.mapped(type));
     }
 
-    private DataRowMapper(final RecordComponentFieldNameResolver fieldNameResolver)
+    private DataRowMapper(final FieldNormalizer fieldNameResolver)
     {
         this.fieldNameResolver = Objects.requireNonNull(fieldNameResolver);
     }

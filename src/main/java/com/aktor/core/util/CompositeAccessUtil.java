@@ -1,5 +1,6 @@
 package com.aktor.core.util;
 
+import com.aktor.core.SearchCriteria;
 import com.aktor.core.exception.GetException;
 import com.aktor.core.exception.SearchException;
 import com.aktor.core.exception.SaveException;
@@ -30,9 +31,9 @@ public final class CompositeAccessUtil
                 item = getter.get(source, key);
                 break;
             }
-            catch (final GetException getException)
+            catch (final GetException exception)
             {
-                cause = getException;
+                cause = exception;
             }
         }
 
@@ -89,7 +90,7 @@ public final class CompositeAccessUtil
         return item;
     }
 
-    public static com.aktor.core.SearchCriteria requireSearchCriteria(final com.aktor.core.SearchCriteria searchCriteria)
+    public static SearchCriteria requireSearchCriteria(final SearchCriteria searchCriteria)
     throws SearchException
     {
         if (searchCriteria == null)

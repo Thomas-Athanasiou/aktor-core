@@ -1,7 +1,7 @@
 package com.aktor.core.util;
 
 import com.aktor.core.*;
-import com.aktor.core.model.FieldResolver;
+import com.aktor.core.model.FieldNormalizer;
 import com.aktor.core.model.SqlDialect;
 import com.aktor.core.model.SqlDialectResolver;
 
@@ -18,13 +18,13 @@ public final class SqlUtil
 
     public static <Key> KeySqlSelectParser<Key> ofKeySelectParser(final String tableName, final String driverName)
     {
-        return ofKeySelectParser(tableName, driverName, (FieldResolver) null);
+        return ofKeySelectParser(tableName, driverName, (FieldNormalizer) null);
     }
 
     public static <Key> KeySqlSelectParser<Key> ofKeySelectParser(
         final String tableName,
         final String driverName,
-        final FieldResolver fieldResolver
+        final FieldNormalizer fieldResolver
     )
     {
         final SqlDialect dialect = ofDialect(driverName);
@@ -60,13 +60,13 @@ public final class SqlUtil
         final String driverName
     )
     {
-        return ofSearchCriteriaParser(tableName, driverName, FieldResolver.mapped(type, Map.of("key", keyFieldName)));
+        return ofSearchCriteriaParser(tableName, driverName, FieldNormalizer.mapped(type, Map.of("key", keyFieldName)));
     }
 
     public static Converter<SearchCriteria, String> ofSearchCriteriaParser(
         final String tableName,
         final String driverName,
-        final FieldResolver fieldResolver
+        final FieldNormalizer fieldResolver
     )
     {
         final SqlDialect dialect = ofDialect(driverName);
@@ -147,13 +147,13 @@ public final class SqlUtil
         final String driverName
     )
     {
-        return ofSearchCriteriaTotalCountParser(tableName, driverName, FieldResolver.mapped(type, Map.of("key", keyFieldName)));
+        return ofSearchCriteriaTotalCountParser(tableName, driverName, FieldNormalizer.mapped(type, Map.of("key", keyFieldName)));
     }
 
     public static Converter<SearchCriteria, String> ofSearchCriteriaTotalCountParser(
         final String tableName,
         final String driverName,
-        final FieldResolver fieldResolver
+        final FieldNormalizer fieldResolver
     )
     {
         final SqlDialect dialect = ofDialect(driverName);
@@ -170,19 +170,19 @@ public final class SqlUtil
         return type -> ofClassSchemaParser(
             tableName,
             driverName,
-            FieldResolver.mapped(type, Map.of(LOGICAL_KEY_FIELD_NAME, keyFieldName))
+            FieldNormalizer.mapped(type, Map.of(LOGICAL_KEY_FIELD_NAME, keyFieldName))
         ).convert(type);
     }
 
     public static Converter<Class<? extends Data<?>>, String> ofClassSchemaParser(final String tableName, final String driverName)
     {
-        return type -> ofClassSchemaParser(tableName, driverName, FieldResolver.mapped(type)).convert(type);
+        return type -> ofClassSchemaParser(tableName, driverName, FieldNormalizer.mapped(type)).convert(type);
     }
 
     public static Converter<Class<? extends Data<?>>, String> ofClassSchemaParser(
         final String tableName,
         final String driverName,
-        final FieldResolver fieldResolver
+        final FieldNormalizer fieldResolver
     )
     {
         final SqlDialect dialect = ofDialect(driverName);

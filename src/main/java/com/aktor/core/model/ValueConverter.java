@@ -45,6 +45,13 @@ public final class ValueConverter<Key>
             {
                 return raw;
             }
+            if (context != null && (Data.class.isAssignableFrom(target) || Data[].class.isAssignableFrom(target)))
+            {
+                try (RelationTraversalGuard.Scope ignored = RelationTraversalGuard.enterRead(context.itemType(), key, relationField))
+                {
+                    return convertInternal(target, raw, key, relationField);
+                }
+            }
             return convertInternal(target, raw, key, relationField);
         }
         catch (final ConversionException | RuntimeException exception)
@@ -65,15 +72,9 @@ public final class ValueConverter<Key>
         final String raw
     )
     {
-        final String itemType = context == null || context.itemType() == null
-            ? "unknown"
-            : context.itemType().getName();
-        final String component = componentName == null || componentName.isBlank()
-            ? "unknown"
-            : componentName;
-        final String field = sourceField == null || sourceField.isBlank()
-            ? "unknown"
-            : sourceField;
+        final String itemType = context == null || context.itemType() == null ? "unknown" : context.itemType().getName();
+        final String component = componentName == null || componentName.isBlank() ? "unknown" : componentName;
+        final String field = sourceField == null || sourceField.isBlank() ? "unknown" : sourceField;
         return "Failed to map component '"
             + component
             + "' (field="
@@ -105,7 +106,9 @@ public final class ValueConverter<Key>
             else
             {
                 final RelationProvider<Key, ?, ?> relationProvider = relationProviderResolver.getRelationProvider(field);
-                object = relationProvider.single(key);
+                object = relationProvider.usesInlineSingularRelationStorage() && (raw == null || raw.isBlank())
+                    ? null
+                    : relationProvider.single(key);
             }
         }
         else if (Data[].class.isAssignableFrom(target))

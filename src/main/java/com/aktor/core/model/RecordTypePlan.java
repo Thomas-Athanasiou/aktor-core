@@ -157,7 +157,7 @@ public final class RecordTypePlan
         {
             final String name = components[index].name();
             componentNames[index] = name;
-            componentSnakeNames[index] = RecordComponentFieldNameResolver.DEFAULT.resolve(name);
+            componentSnakeNames[index] = FieldNormalizer.DEFAULT.resolve(name);
             componentTypes[index] = components[index].type();
             accessorMethods[index] = components[index].accessor();
             if (name.equals("key"))
@@ -204,7 +204,7 @@ public final class RecordTypePlan
         {
             final String name = fallbackComponentNames[index];
             componentNames[index] = name;
-            componentSnakeNames[index] = RecordComponentFieldNameResolver.DEFAULT.resolve(name);
+            componentSnakeNames[index] = FieldNormalizer.DEFAULT.resolve(name);
             if ("key".equals(name))
             {
                 keyIndex = index;

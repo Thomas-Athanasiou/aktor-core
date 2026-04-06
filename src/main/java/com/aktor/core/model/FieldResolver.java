@@ -13,14 +13,14 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
-public final class FieldNormalizer
-implements FieldNameNormalizer
+public final class FieldResolver
+implements FieldNormalizer
 {
     private static final String LOGICAL_KEY_FIELD_NAME = "key";
 
     private static final Pattern SAFE_FIELD = Pattern.compile("[A-Za-z][A-Za-z0-9_]*");
 
-    private static final Map<CacheKey, FieldNormalizer> TYPE_CACHE = new ConcurrentHashMap<>();
+    private static final Map<CacheKey, FieldResolver> TYPE_CACHE = new ConcurrentHashMap<>();
 
     public record ResolvedValue(String field, String rawValue)
     {
@@ -33,24 +33,24 @@ implements FieldNameNormalizer
 
     private final Map<String, String> resolvedCache = new ConcurrentHashMap<>();
 
-    private FieldNormalizer(final String[] fields, final Map<String, String> aliases)
+    private FieldResolver(final String[] fields, final Map<String, String> aliases)
     {
         this.fields = Arrays.copyOf(Objects.requireNonNull(fields), fields.length);
         this.aliases = Map.copyOf(Objects.requireNonNull(aliases));
     }
 
-    public static FieldNormalizer mapped(final Class<? extends Data<?>> type)
+    public static FieldResolver mapped(final Class<? extends Data<?>> type)
     {
         return mapped(type, Map.of());
     }
 
-    public static FieldNormalizer mapped(final Class<? extends Data<?>> type, final Map<String, String> mappedFields)
+    public static FieldResolver mapped(final Class<? extends Data<?>> type, final Map<String, String> mappedFields)
     {
         final CacheKey cacheKey = new CacheKey(
             Objects.requireNonNull(type),
             Map.copyOf(Objects.requireNonNull(mappedFields))
         );
-        return TYPE_CACHE.computeIfAbsent(cacheKey, FieldNormalizer::buildForType);
+        return TYPE_CACHE.computeIfAbsent(cacheKey, FieldResolver::buildForType);
     }
 
     public String resolveRawKey(
@@ -129,7 +129,7 @@ implements FieldNameNormalizer
         throw new IllegalArgumentException("Unknown field: " + safeRequestedField);
     }
 
-    private static FieldNormalizer buildForType(final CacheKey cacheKey)
+    private static FieldResolver buildForType(final CacheKey cacheKey)
     {
         try
         {
@@ -173,7 +173,7 @@ implements FieldNameNormalizer
                     putAlias(aliases, alias, column);
                 }
             }
-            return new FieldNormalizer(orderedFields, aliases);
+            return new FieldResolver(orderedFields, aliases);
         }
         catch (final ConversionException exception)
         {

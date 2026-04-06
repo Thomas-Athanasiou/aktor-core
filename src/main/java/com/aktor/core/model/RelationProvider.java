@@ -40,6 +40,7 @@ implements Model
     private final BiFunction<MainKey, ForeignKey, Relation<MainKey, ForeignKey>> relationFactory;
     private final String mainField;
     private final String foreignField;
+    private final RelationSavePolicy savePolicy;
     private final RelationDeletePolicy deletePolicy;
     private final List<TransactionParticipant> transactionParticipants;
 
@@ -52,6 +53,7 @@ implements Model
             binding.relationFactory(),
             binding.mainField(),
             binding.foreignField(),
+            binding.savePolicy(),
             binding.deletePolicy()
         );
     }
@@ -63,6 +65,7 @@ implements Model
         final BiFunction<MainKey, ForeignKey, Relation<MainKey, ForeignKey>> relationFactory,
         final String mainField,
         final String foreignField,
+        final RelationSavePolicy savePolicy,
         final RelationDeletePolicy deletePolicy
     )
     {
@@ -73,6 +76,7 @@ implements Model
         this.relationFactory = Objects.requireNonNull(relationFactory);
         this.mainField = requireField(mainField);
         this.foreignField = requireField(foreignField);
+        this.savePolicy = Objects.requireNonNull(savePolicy);
         this.deletePolicy = Objects.requireNonNull(deletePolicy);
         this.transactionParticipants = List.copyOf(
             TransactionParticipantUtil.collect(List.of(this.foreignManagement, this.relationRepository))
@@ -112,7 +116,10 @@ implements Model
             {
                 try
                 {
-                    items.add(getForeignRepositoryItem(relation.foreignKey()));
+                    try (RelationTraversalGuard.Scope ignored = RelationTraversalGuard.enterRead(foreignType, relation.foreignKey(), foreignField))
+                    {
+                        items.add(getForeignRepositoryItem(relation.foreignKey()));
+                    }
                 }
                 catch (final GetException ignored)
                 {
@@ -157,7 +164,10 @@ implements Model
                     throw new ModelException("Unsupported relation type for relation key: " + mainKey);
                 }
 
-                reconcileRelations(mainKey, loadExistingRelations(mainKey), foreignKeys);
+                if (!usesInlineSingularRelationStorage())
+                {
+                    reconcileRelations(mainKey, loadExistingRelations(mainKey), foreignKeys);
+                }
             }
         );
     }
@@ -226,9 +236,26 @@ implements Model
             throw new ModelException(exception);
         }
 
+        if (savePolicy.equals(RelationSavePolicy.REFERENCE))
+        {
+            return item.key();
+        }
+
+        if (savePolicy.equals(RelationSavePolicy.RESTRICT) && !foreignManagement.exists(item.key()))
+        {
+            throw new ModelException("Referenced item does not exist for relation field: " + foreignField);
+        }
+
         try
         {
-            foreignManagement.save(item);
+            try (RelationTraversalGuard.Scope ignored = RelationTraversalGuard.enterSave(
+                foreignType,
+                item.key(),
+                foreignField
+            ))
+            {
+                foreignManagement.save(item);
+            }
         }
         catch (final SaveException exception)
         {
@@ -328,6 +355,12 @@ implements Model
             throw new IllegalArgumentException("field cannot be blank");
         }
         return value;
+    }
+
+    boolean usesInlineSingularRelationStorage()
+    {
+        return "key".equals(mainField)
+            && !"foreign_key".equals(foreignField);
     }
 
     @FunctionalInterface

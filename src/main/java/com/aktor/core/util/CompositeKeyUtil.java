@@ -18,7 +18,9 @@ public final class CompositeKeyUtil
         final StringBuilder stringBuilder = new StringBuilder();
         IntStream.range(0, parts.length).forEachOrdered(
             index -> {
-                stringBuilder.append(Base64.getUrlEncoder().withoutPadding().encodeToString(parts[index].getBytes(StandardCharsets.UTF_8)));
+                stringBuilder.append(
+                    Base64.getUrlEncoder().withoutPadding().encodeToString(parts[index].getBytes(StandardCharsets.UTF_8))
+                );
                 if (index < parts.length - 1)
                 {
                     stringBuilder.append(SEPARATOR);
