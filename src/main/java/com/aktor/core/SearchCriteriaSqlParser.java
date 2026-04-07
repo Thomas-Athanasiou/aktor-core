@@ -1,33 +1,30 @@
 package com.aktor.core;
 
+import com.aktor.core.exception.ConversionException;
 import com.aktor.core.model.FieldNormalizer;
 import com.aktor.core.util.CsvValuesUtil;
 import com.aktor.core.value.Filter;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
 public abstract class SearchCriteriaSqlParserAbstract
+extends SqlStatementParserBase
 implements Converter<SearchCriteria, String>
 {
-    protected final String tableName;
-    protected final String start;
-    protected final String end;
     protected final FieldNormalizer fieldNormalizer;
 
     protected SearchCriteriaSqlParserAbstract(
-        final String tableName,
+        final String table,
         final String start,
         final String end,
         final FieldNormalizer fieldNormalizer
     )
     {
-        super();
-        this.tableName = Objects.requireNonNull(tableName);
-        this.start = Objects.requireNonNull(start);
-        this.end = Objects.requireNonNull(end);
+        super(table, start, end);
         this.fieldNormalizer = Objects.requireNonNull(fieldNormalizer);
     }
 
@@ -38,7 +35,7 @@ implements Converter<SearchCriteria, String>
         {
             if (part != null && !part.isBlank())
             {
-                if (builder.length() > 0)
+                if (!builder.isEmpty())
                 {
                     builder.append(' ');
                 }
@@ -54,14 +51,16 @@ implements Converter<SearchCriteria, String>
         final String... trailingParts
     )
     {
-        final List<String> parts = new ArrayList<>(List.of("SELECT", projection, "FROM", tableReference(), groupsToSql(searchCriteria.filterGroups())));
+        final Collection<String> parts = new ArrayList<>(
+            List.of("SELECT", projection, "FROM", tableReference(), groupsToSql(searchCriteria.filterGroups()))
+        );
         Collections.addAll(parts, trailingParts);
         return joinParts(parts);
     }
 
     protected final String tableReference()
     {
-        return start + tableName + end;
+        return start + table + end;
     }
 
     protected final String groupsToSql(final FilterGroup[] groups)
@@ -107,11 +106,9 @@ implements Converter<SearchCriteria, String>
         {
             case NOT_EQUALS -> field + " != ?";
             case GREATER_THAN -> field + " > ?";
-            case FROM -> field + " >= ?";
-            case GREATER_THAN_OR_EQUALS, MORE_OR_EQUALS -> field + " >= ?";
+            case FROM, GREATER_THAN_OR_EQUALS, MORE_OR_EQUALS -> field + " >= ?";
             case LESS_THAN -> field + " < ?";
-            case TO -> field + " <= ?";
-            case LESS_THAN_OR_EQUALS -> field + " <= ?";
+            case TO, LESS_THAN_OR_EQUALS -> field + " <= ?";
             case LIKE -> field + " LIKE ?";
             case NOT_LIKE -> field + " NOT LIKE ?";
             case IN -> inClause(field, filter.value(), false);
@@ -145,7 +142,7 @@ implements Converter<SearchCriteria, String>
         return builder.toString();
     }
 
-    protected final String convertSql(final SqlSupplier sqlSupplier) throws com.aktor.core.exception.ConversionException
+    protected final String convertSql(final SqlSupplier sqlSupplier) throws ConversionException
     {
         try
         {

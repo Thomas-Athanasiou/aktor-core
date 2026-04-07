@@ -1,6 +1,7 @@
 package com.aktor.core;
 
 import com.aktor.core.exception.ConversionException;
+import com.aktor.core.model.SqlDialect;
 import com.aktor.core.util.DataRowSqlStatementUtil;
 
 public class DataRowSqlInsertParser<Item>
@@ -24,5 +25,20 @@ extends DataRowSqlParserBase<Item>
         return  "INSERT INTO " + quotedTable()
             + "(" + DataRowSqlStatementUtil.columns(values, start, end) + ")"
             + "VALUES (" + DataRowSqlStatementUtil.placeholders(values.length) + ")";
+    }
+
+    public static <Item> DataRowSqlInsertParser<Item> of(
+        final String table,
+        final Converter<Item, DataRow> converter,
+        final String driver
+    )
+    {
+        final SqlDialect dialect = ofDialect(driver);
+        return new DataRowSqlInsertParser<>(
+            table,
+            dialect.quoteStart(),
+            dialect.quoteEnd(),
+            converter
+        );
     }
 }
