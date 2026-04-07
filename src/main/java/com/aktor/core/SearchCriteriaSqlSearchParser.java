@@ -1,7 +1,7 @@
 package com.aktor.core;
 
 import com.aktor.core.exception.ConversionException;
-import com.aktor.core.model.FieldResolver;
+import com.aktor.core.model.FieldNormalizer;
 import com.aktor.core.model.SqlDialect;
 
 import java.util.Objects;
@@ -16,7 +16,7 @@ extends SearchCriteriaSqlParserAbstract
         final String start,
         final String end,
         final SqlDialect sqlDialect,
-        final FieldResolver fieldResolver
+        final FieldNormalizer fieldResolver
     )
     {
         super(tableName, start, end, fieldResolver);
@@ -32,7 +32,7 @@ extends SearchCriteriaSqlParserAbstract
                 searchCriteria.sortOrders(),
                 start,
                 end,
-                fieldResolver
+                fieldNormalizer
             );
             final String paginationSql = sqlDialect.paginationClause(searchCriteria, sortOrdersSql);
             return sqlDialect.paginationClauseIncludesOrderBy()

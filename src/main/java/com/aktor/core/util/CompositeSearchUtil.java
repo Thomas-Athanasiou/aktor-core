@@ -10,6 +10,7 @@ import com.aktor.core.model.SaveProvider;
 import com.aktor.core.model.SearchProvider;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -194,12 +195,12 @@ public final class CompositeSearchUtil
     }
 
     private static <Source, Item extends Data<Key>, Key> void collectItems(
-        final List<Item> items,
+        final Iterable<Item> items,
         final Map<Key, Item> itemMap,
-        final List<Source> cacheList,
+        final Iterable<Source> cacheList,
         final SaveProvider<Source, Item> saveProvider,
         final int needed,
-        final Set<Key> uniqueKeys
+        final Collection<Key> uniqueKeys
     ) throws SaveException
     {
         for (final Item item : items)
@@ -217,7 +218,7 @@ public final class CompositeSearchUtil
     }
 
     private static <Source> void appendCacheSource(
-        final List<Source> cacheList,
+        final Collection<Source> cacheList,
         final Source source,
         final int sourceIndex,
         final int cacheWriteSourceCount

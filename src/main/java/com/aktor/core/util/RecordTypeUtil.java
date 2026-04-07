@@ -1,7 +1,5 @@
 package com.aktor.core.util;
 
-import com.aktor.core.model.RecordAccessorFallbackUtil;
-
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -219,34 +217,13 @@ public final class RecordTypeUtil
             .toArray(String[]::new);
     }
 
-    public static final class ComponentDescriptor
-    {
-        private final String name;
-
-        private final Class<?> type;
-
-        private final Method accessor;
-
-        public ComponentDescriptor(final String name, final Class<?> type, final Method accessor)
+    public record ComponentDescriptor(String name, Class<?> type, Method accessor)
         {
-            this.name = Objects.requireNonNull(name);
-            this.type = Objects.requireNonNull(type);
-            this.accessor = Objects.requireNonNull(accessor);
+            public ComponentDescriptor(final String name, final Class<?> type, final Method accessor)
+            {
+                this.name = Objects.requireNonNull(name);
+                this.type = Objects.requireNonNull(type);
+                this.accessor = Objects.requireNonNull(accessor);
+            }
         }
-
-        public String name()
-        {
-            return name;
-        }
-
-        public Class<?> type()
-        {
-            return type;
-        }
-
-        public Method accessor()
-        {
-            return accessor;
-        }
-    }
 }

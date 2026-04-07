@@ -46,11 +46,10 @@ implements FieldNormalizer
 
     public static FieldResolver mapped(final Class<? extends Data<?>> type, final Map<String, String> mappedFields)
     {
-        final CacheKey cacheKey = new CacheKey(
-            Objects.requireNonNull(type),
-            Map.copyOf(Objects.requireNonNull(mappedFields))
+        return TYPE_CACHE.computeIfAbsent(
+            new CacheKey(Objects.requireNonNull(type), Map.copyOf(Objects.requireNonNull(mappedFields))),
+            FieldResolver::buildForType
         );
-        return TYPE_CACHE.computeIfAbsent(cacheKey, FieldResolver::buildForType);
     }
 
     public String resolveRawKey(
@@ -151,9 +150,7 @@ implements FieldNormalizer
                 );
                 final String actualColumn = index == plan.keyComponentIndex()
                     ? actualKeyFieldName
-                    : configuredColumn != null && !configuredColumn.isBlank()
-                        ? configuredColumn
-                        : componentSnakeName;
+                    : configuredColumn != null && !configuredColumn.isBlank() ? configuredColumn : componentSnakeName;
                 orderedFields[index] = actualColumn;
 
                 putAlias(aliases, componentName, actualColumn);
@@ -221,14 +218,7 @@ implements FieldNormalizer
 
     private static String firstNonBlank(final String... candidates)
     {
-        for (final String candidate : candidates)
-        {
-            if (candidate != null && !candidate.isBlank())
-            {
-                return candidate;
-            }
-        }
-        return null;
+        return Arrays.stream(candidates).filter(candidate -> candidate != null && !candidate.isBlank()).findFirst().orElse(null);
     }
 
     private static void putAlias(final Map<String, String> aliases, final String alias, final String column)

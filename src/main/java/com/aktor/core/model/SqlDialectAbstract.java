@@ -14,18 +14,17 @@ implements SqlDialect
     }
 
     protected final String toConflictAssignments(
-        final String keyFieldName,
+        final String keyField,
         final String[] fieldNames,
         final Function<String, String> valueExpression
     )
     {
-        Objects.requireNonNull(fieldNames);
         Objects.requireNonNull(valueExpression);
 
         final StringBuilder output = new StringBuilder();
-        for (final String fieldName : fieldNames)
+        for (final String fieldName : Objects.requireNonNull(fieldNames))
         {
-            if (fieldName == null || fieldName.isBlank() || fieldName.equalsIgnoreCase(keyFieldName))
+            if (fieldName == null || fieldName.isBlank() || fieldName.equalsIgnoreCase(keyField))
             {
                 continue;
             }

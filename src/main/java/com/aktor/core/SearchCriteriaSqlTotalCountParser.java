@@ -1,6 +1,7 @@
 package com.aktor.core;
 
 import com.aktor.core.exception.ConversionException;
+import com.aktor.core.model.FieldNormalizer;
 import com.aktor.core.model.FieldResolver;
 
 public class SearchCriteriaSqlTotalCountParser
@@ -10,7 +11,7 @@ extends SearchCriteriaSqlParserAbstract
         final String tableName,
         final String start,
         final String end,
-        final FieldResolver fieldResolver
+        final FieldNormalizer fieldResolver
     )
     {
         super(tableName, start, end, fieldResolver);

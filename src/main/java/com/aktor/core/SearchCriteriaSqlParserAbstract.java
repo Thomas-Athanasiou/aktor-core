@@ -1,6 +1,6 @@
 package com.aktor.core;
 
-import com.aktor.core.model.FieldResolver;
+import com.aktor.core.model.FieldNormalizer;
 import com.aktor.core.util.CsvValuesUtil;
 import com.aktor.core.value.Filter;
 
@@ -15,20 +15,20 @@ implements Converter<SearchCriteria, String>
     protected final String tableName;
     protected final String start;
     protected final String end;
-    protected final FieldResolver fieldResolver;
+    protected final FieldNormalizer fieldNormalizer;
 
     protected SearchCriteriaSqlParserAbstract(
         final String tableName,
         final String start,
         final String end,
-        final FieldResolver fieldResolver
+        final FieldNormalizer fieldNormalizer
     )
     {
         super();
         this.tableName = Objects.requireNonNull(tableName);
         this.start = Objects.requireNonNull(start);
         this.end = Objects.requireNonNull(end);
-        this.fieldResolver = Objects.requireNonNull(fieldResolver);
+        this.fieldNormalizer = Objects.requireNonNull(fieldNormalizer);
     }
 
     protected static String joinParts(final Iterable<String> parts)
@@ -101,7 +101,7 @@ implements Converter<SearchCriteria, String>
 
     private String filterToSql(final Filter filter)
     {
-        final String field = start + fieldResolver.resolve(filter.field()) + end;
+        final String field = start + fieldNormalizer.resolve(filter.field()) + end;
 
         return switch (filter.conditionType())
         {

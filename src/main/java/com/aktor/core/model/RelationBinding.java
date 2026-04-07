@@ -10,6 +10,7 @@ import com.aktor.core.service.ManagementRepository;
 import java.util.Objects;
 import java.util.function.BiFunction;
 
+// TODO TOO MANY CTOR ARGS
 public record RelationBinding<MainKey, ForeignKey, ForeignData extends Data<ForeignKey>>(
     String field,
     Class<ForeignData> foreignType,

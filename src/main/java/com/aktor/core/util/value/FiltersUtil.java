@@ -4,6 +4,7 @@ import com.aktor.core.value.Filter;
 
 import java.util.Arrays;
 
+// TODO MAYBE MOVE THIS TO DATA OBJECT?
 public final class FiltersUtil
 {
     private FiltersUtil()

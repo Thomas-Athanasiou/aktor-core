@@ -148,8 +148,7 @@ implements Converter<Map<String, String>, Item>
     {
         try
         {
-            final Method keyMethod = itemType.getMethod(LOGICAL_KEY_FIELD_NAME);
-            final Class<?> methodType = keyMethod.getReturnType();
+            final Class<?> methodType = itemType.getMethod(LOGICAL_KEY_FIELD_NAME).getReturnType();
             if (!Void.TYPE.equals(methodType))
             {
                 return (Class<Key>) methodType;

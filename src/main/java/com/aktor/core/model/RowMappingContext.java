@@ -5,16 +5,12 @@ import java.util.Objects;
 import java.util.LinkedHashMap;
 import java.util.Collections;
 
-public record RowMappingContext(
-    Map<String, String> row,
-    Class<?> itemType,
-    String keyField
-)
+public record RowMappingContext(Map<String, String> row, Class<?> itemType, String keyField)
 {
     public RowMappingContext
     {
         row = Collections.unmodifiableMap(new LinkedHashMap<>(Objects.requireNonNull(row)));
-        itemType = Objects.requireNonNull(itemType);
+        Objects.requireNonNull(itemType);
         keyField = Objects.requireNonNull(keyField);
     }
 }

@@ -2,6 +2,7 @@ package com.aktor.core;
 
 import com.aktor.core.exception.ConversionException;
 import com.aktor.core.model.FieldNormalizer;
+import com.aktor.core.model.FieldResolver;
 import com.aktor.core.model.RecordTypePlan;
 import com.aktor.core.util.SimpleDataObjectConverter;
 
@@ -10,28 +11,21 @@ import java.util.Objects;
 public final class DataRowMapper<Item extends Data<Key>, Key>
 implements Converter<Item, DataRow>
 {
-    private static final Value[] VALUES = new Value[0];
-
-    private final FieldNormalizer fieldNameResolver;
+    private final FieldNormalizer fieldResolver;
 
     public DataRowMapper()
     {
         this(FieldNormalizer.DEFAULT);
     }
 
-    public DataRowMapper(final FieldNormalizer fieldResolver)
-    {
-        this((FieldNormalizer) fieldResolver);
-    }
-
     public DataRowMapper(final Class<? extends Data<?>> type)
     {
-        this(FieldNormalizer.mapped(type));
+        this(FieldResolver.mapped(type));
     }
 
-    private DataRowMapper(final FieldNormalizer fieldNameResolver)
+    public DataRowMapper(final FieldNormalizer fieldResolver)
     {
-        this.fieldNameResolver = Objects.requireNonNull(fieldNameResolver);
+        this.fieldResolver = Objects.requireNonNull(fieldResolver);
     }
 
     @Override
@@ -52,7 +46,7 @@ implements Converter<Item, DataRow>
                 if (object != null && isScalarComponent(type, plan.componentType(index)))
                 {
                     values[valueCount++] = new Value(
-                        fieldNameResolver.resolve(plan.componentName(index)),
+                        fieldResolver.resolve(plan.componentName(index)),
                         SimpleDataObjectConverter.objectToString(object)
                     );
                 }

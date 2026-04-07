@@ -2,6 +2,7 @@ package com.aktor.core.util;
 
 import com.aktor.core.*;
 import com.aktor.core.model.FieldNormalizer;
+import com.aktor.core.model.FieldResolver;
 import com.aktor.core.model.SqlDialect;
 import com.aktor.core.model.SqlDialectResolver;
 
@@ -16,62 +17,65 @@ public final class SqlUtil
         super();
     }
 
-    public static <Key> KeySqlSelectParser<Key> ofKeySelectParser(final String tableName, final String driverName)
+    public static <Key> KeySqlSelectParser<Key> ofKeySelectParser(final String table, final String driver)
     {
-        return ofKeySelectParser(tableName, driverName, (FieldNormalizer) null);
+        return ofKeySelectParser(table, driver, (FieldNormalizer) null);
     }
 
     public static <Key> KeySqlSelectParser<Key> ofKeySelectParser(
-        final String tableName,
-        final String driverName,
+        final String table,
+        final String driver,
         final FieldNormalizer fieldResolver
     )
     {
-        final SqlDialect dialect = ofDialect(driverName);
+        final SqlDialect dialect = ofDialect(driver);
         return new KeySqlSelectParser<>(
-            tableName,
+            table,
             fieldResolver == null ? LOGICAL_KEY_FIELD_NAME : fieldResolver.resolve(LOGICAL_KEY_FIELD_NAME),
             dialect.quoteStart(),
             dialect.quoteEnd()
         );
     }
 
-    public static <Key> KeySqlSelectParser<Key> ofKeySelectParser(final String tableName, final String keyFieldName, final String driverName)
+
+    // TODO IS THIS METHOD STILL NEEDED TO BE PUBLIC?
+    public static <Key> KeySqlSelectParser<Key> ofKeySelectParser(final String table, final String keyField, final String driver)
     {
-        final SqlDialect dialect = ofDialect(driverName);
-        return new KeySqlSelectParser<>(tableName, keyFieldName, dialect.quoteStart(), dialect.quoteEnd());
+        final SqlDialect dialect = ofDialect(driver);
+        return new KeySqlSelectParser<>(table, keyField, dialect.quoteStart(), dialect.quoteEnd());
     }
 
-    public static <Key> KeySqlDeleteParser<Key> ofKeyDeleteParser(final String tableName, final String keyFieldName, final String driverName)
+    // TODO IS THIS METHOD STILL NEEDED TO BE PUBLIC?
+    public static <Key> KeySqlDeleteParser<Key> ofKeyDeleteParser(final String table, final String keyField, final String driver)
     {
-        final SqlDialect dialect = ofDialect(driverName);
-        return new KeySqlDeleteParser<>(tableName, keyFieldName, dialect.quoteStart(), dialect.quoteEnd());
+        final SqlDialect dialect = ofDialect(driver);
+        return new KeySqlDeleteParser<>(table, keyField, dialect.quoteStart(), dialect.quoteEnd());
     }
 
-    public static <Key> KeySqlDeleteParser<Key> ofKeyDeleteParser(final String tableName, final String driverName)
+    public static <Key> KeySqlDeleteParser<Key> ofKeyDeleteParser(final String table, final String driver)
     {
-        return ofKeyDeleteParser(tableName, LOGICAL_KEY_FIELD_NAME, driverName);
+        return ofKeyDeleteParser(table, LOGICAL_KEY_FIELD_NAME, driver);
     }
 
     public static Converter<SearchCriteria, String> ofSearchCriteriaParser(
         final Class<? extends Data<?>> type,
-        final String tableName,
-        final String keyFieldName,
-        final String driverName
+        final String table,
+        final String keyField,
+        final String driver
     )
     {
-        return ofSearchCriteriaParser(tableName, driverName, FieldNormalizer.mapped(type, Map.of("key", keyFieldName)));
+        return ofSearchCriteriaParser(table, driver, FieldResolver.mapped(type, Map.of("key", keyField)));
     }
 
     public static Converter<SearchCriteria, String> ofSearchCriteriaParser(
-        final String tableName,
-        final String driverName,
+        final String table,
+        final String driver,
         final FieldNormalizer fieldResolver
     )
     {
-        final SqlDialect dialect = ofDialect(driverName);
+        final SqlDialect dialect = ofDialect(driver);
         return new SearchCriteriaSqlSearchParser(
-            tableName,
+            table,
             dialect.quoteStart(),
             dialect.quoteEnd(),
             dialect,
@@ -80,36 +84,36 @@ public final class SqlUtil
     }
 
     public static <Item> DataRowSqlUpdateParser<Item> ofDataRowUpdateParser(
-        final String tableName,
+        final String table,
         final Converter<Item, DataRow> converter,
-        final String driverName
+        final String driver
     )
     {
-        return ofDataRowUpdateParser(tableName, LOGICAL_KEY_FIELD_NAME, converter, driverName);
+        return ofDataRowUpdateParser(table, LOGICAL_KEY_FIELD_NAME, converter, driver);
     }
 
     public static <Item> DataRowSqlUpdateParser<Item> ofDataRowUpdateParser(
-        final String tableName,
-        final String keyFieldName,
+        final String table,
+        final String keyField,
         final Converter<Item, DataRow> converter,
-        final String driverName
+        final String driver
     )
     {
-        final SqlDialect dialect = ofDialect(driverName);
+        final SqlDialect dialect = ofDialect(driver);
         return new DataRowSqlUpdateParser<>(
-            tableName,
-            keyFieldName,
+            table,
+            keyField,
             dialect.quoteStart(),
             dialect.quoteEnd(),
             converter
         );
     }
 
-    public static <Item> DataRowSqlInsertParser<Item> ofDataRowInsertParser(final String tableName, final Converter<Item, DataRow> converter, final String driverName)
+    public static <Item> DataRowSqlInsertParser<Item> ofDataRowInsertParser(final String table, final Converter<Item, DataRow> converter, final String driver)
     {
-        final SqlDialect dialect = ofDialect(driverName);
+        final SqlDialect dialect = ofDialect(driver);
         return new DataRowSqlInsertParser<>(
-            tableName,
+            table,
             dialect.quoteStart(),
             dialect.quoteEnd(),
             converter
@@ -117,77 +121,81 @@ public final class SqlUtil
     }
 
     public static <Item> Converter<Item, String> ofDataRowUpsertParser(
-        final String tableName,
+        final String table,
         final Converter<Item, DataRow> converter,
-        final String driverName
+        final String driver
     )
     {
-        return ofDataRowUpsertParser(tableName, LOGICAL_KEY_FIELD_NAME, converter, driverName);
+        return ofDataRowUpsertParser(table, LOGICAL_KEY_FIELD_NAME, converter, driver);
     }
 
     public static <Item> Converter<Item, String> ofDataRowUpsertParser(
-        final String tableName,
-        final String keyFieldName,
+        final String table,
+        final String keyField,
         final Converter<Item, DataRow> converter,
-        final String driverName
+        final String driver
     )
     {
-        final SqlDialect dialect = ofDialect(driverName);
+        final SqlDialect dialect = ofDialect(driver);
         if (!dialect.supportsUpsert())
         {
             return null;
         }
-        return new DataRowSqlUpsertParser<>(tableName, keyFieldName, dialect, converter);
+        return new DataRowSqlUpsertParser<>(table, keyField, dialect, converter);
     }
 
     public static Converter<SearchCriteria, String> ofSearchCriteriaTotalCountParser(
         final Class<? extends Data<?>> type,
-        final String tableName,
-        final String keyFieldName,
-        final String driverName
+        final String table,
+        final String keyField,
+        final String driver
     )
     {
-        return ofSearchCriteriaTotalCountParser(tableName, driverName, FieldNormalizer.mapped(type, Map.of("key", keyFieldName)));
+        return ofSearchCriteriaTotalCountParser(table, driver, FieldResolver.mapped(type, Map.of("key", keyField)));
     }
 
     public static Converter<SearchCriteria, String> ofSearchCriteriaTotalCountParser(
-        final String tableName,
-        final String driverName,
+        final String table,
+        final String driver,
         final FieldNormalizer fieldResolver
     )
     {
-        final SqlDialect dialect = ofDialect(driverName);
+        final SqlDialect dialect = ofDialect(driver);
         return new SearchCriteriaSqlTotalCountParser(
-            tableName,
+            table,
             dialect.quoteStart(),
             dialect.quoteEnd(),
             fieldResolver
         );
     }
 
-    public static Converter<Class<? extends Data<?>>, String> ofClassSchemaParser(final String tableName, final String keyFieldName, final String driverName)
+    public static Converter<Class<? extends Data<?>>, String> ofClassSchemaParser(
+        final String table,
+        final String keyField,
+        final String driver
+    )
     {
         return type -> ofClassSchemaParser(
-            tableName,
-            driverName,
-            FieldNormalizer.mapped(type, Map.of(LOGICAL_KEY_FIELD_NAME, keyFieldName))
+            table,
+            driver,
+            FieldResolver.mapped(type, Map.of(LOGICAL_KEY_FIELD_NAME, keyField))
         ).convert(type);
     }
 
-    public static Converter<Class<? extends Data<?>>, String> ofClassSchemaParser(final String tableName, final String driverName)
+    public static Converter<Class<? extends Data<?>>, String> ofClassSchemaParser(final String table, final String driver)
     {
-        return type -> ofClassSchemaParser(tableName, driverName, FieldNormalizer.mapped(type)).convert(type);
+        return type -> ofClassSchemaParser(table, driver, FieldResolver.mapped(type)).convert(type);
     }
 
     public static Converter<Class<? extends Data<?>>, String> ofClassSchemaParser(
-        final String tableName,
-        final String driverName,
+        final String table,
+        final String driver,
         final FieldNormalizer fieldResolver
     )
     {
-        final SqlDialect dialect = ofDialect(driverName);
+        final SqlDialect dialect = ofDialect(driver);
         return new ClassSqlSchemaParser(
-            tableName,
+            table,
             fieldResolver.resolve(LOGICAL_KEY_FIELD_NAME),
             dialect.quoteStart(),
             dialect.quoteEnd(),
@@ -195,8 +203,8 @@ public final class SqlUtil
         );
     }
 
-    public static SqlDialect ofDialect(final String driverName)
+    public static SqlDialect ofDialect(final String driver)
     {
-        return SqlDialectResolver.of(driverName);
+        return SqlDialectResolver.of(driver);
     }
 }

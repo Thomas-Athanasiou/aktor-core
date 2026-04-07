@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
+//TODO: Resource service superclass
 public class HttpRequestService
 {
     private final HttpClientFactory httpClientFactory;

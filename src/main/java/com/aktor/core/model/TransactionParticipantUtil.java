@@ -1,6 +1,7 @@
 package com.aktor.core.model;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -25,8 +26,8 @@ public final class TransactionParticipantUtil
     }
 
     public static void addIfParticipant(
-        final List<TransactionParticipant> participants,
-        final Set<TransactionParticipant> unique,
+        final Collection<TransactionParticipant> participants,
+        final Collection<TransactionParticipant> unique,
         final Object candidate
     )
     {

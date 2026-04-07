@@ -3,6 +3,7 @@ package com.aktor.core.model;
 import com.aktor.core.Data;
 import com.aktor.core.Model;
 import com.aktor.core.exception.ModelException;
+import com.aktor.core.util.RecordAccessorFallbackUtil;
 import com.aktor.core.util.RecordTypeUtil;
 
 import java.io.Serializable;
@@ -24,7 +25,7 @@ implements Model, TransactionParticipant
     private static final Map<Class<?>, AccessorMetadata[]> FIELD_CACHE = new ConcurrentHashMap<>();
     private static final AccessorMetadata[] ACCESSOR_METADATA = new AccessorMetadata[0];
 
-    private final Map<String, RelationProvider<Key, ?, ?>> relationProviderMap;
+    private final Map<String, RelationProvider<Key, ?, ?>> map;
     private final List<TransactionParticipant> transactionParticipants;
 
     public RelationProviderResolver()
@@ -32,13 +33,12 @@ implements Model, TransactionParticipant
         this(Map.of());
     }
 
-    public RelationProviderResolver(final Map<String, ? extends RelationProvider<Key, ?, ?>> relationProviderMap)
+    public RelationProviderResolver(final Map<String, ? extends RelationProvider<Key, ?, ?>> map)
     {
         super();
-        final Map<String, RelationProvider<Key, ?, ?>> providerMap = new HashMap<>(Objects.requireNonNull(relationProviderMap));
-        this.relationProviderMap = Map.copyOf(providerMap);
-        final Collection<Object> providers = new ArrayList<>(this.relationProviderMap.size());
-        for (final RelationProvider<Key, ?, ?> relationProvider : this.relationProviderMap.values())
+        this.map = Map.copyOf(new HashMap<>(Objects.requireNonNull(map)));
+        final Collection<Object> providers = new ArrayList<>(this.map.size());
+        for (final RelationProvider<Key, ?, ?> relationProvider : this.map.values())
         {
             providers.addAll(relationProvider.getTransactionParticipants());
         }
@@ -52,7 +52,7 @@ implements Model, TransactionParticipant
 
     public RelationProvider<Key, ?, ?> getRelationProvider(final String field) throws ModelException
     {
-        final RelationProvider<Key, ?, ?> relationProvider = relationProviderMap.get(field);
+        final RelationProvider<Key, ?, ?> relationProvider = map.get(field);
         if (relationProvider == null)
         {
             throw new ModelException("No relation provider found for field: " + field);
@@ -62,7 +62,7 @@ implements Model, TransactionParticipant
 
     void save(final Data<Key> item) throws ModelException
     {
-        if (!relationProviderMap.isEmpty())
+        if (!map.isEmpty())
         {
             final Class<?> itemType = item.getClass();
             if (!RecordTypeUtil.isRecordType(itemType))
@@ -88,11 +88,7 @@ implements Model, TransactionParticipant
                     }
                     else
                     {
-                        try (RelationTraversalGuard.Scope ignored = RelationTraversalGuard.enterSave(
-                            itemType,
-                            item.key(),
-                            metadata.name()
-                        ))
+                        try (RelationTraversalGuard.Scope ignored = RelationTraversalGuard.enterSave(itemType, item.key(), metadata.name()))
                         {
                             relationProvider.save(item.key(), value);
                         }
@@ -108,7 +104,7 @@ implements Model, TransactionParticipant
 
     void afterDelete(final Data<Key> item) throws ModelException
     {
-        if (!relationProviderMap.isEmpty())
+        if (!map.isEmpty())
         {
             final Class<?> itemType = item.getClass();
             if (!RecordTypeUtil.isRecordType(itemType))
@@ -139,7 +135,7 @@ implements Model, TransactionParticipant
 
     void beforeDelete(final Data<Key> item) throws ModelException
     {
-        if (!relationProviderMap.isEmpty())
+        if (!map.isEmpty())
         {
             final Class<?> itemType = item.getClass();
             if (!RecordTypeUtil.isRecordType(itemType))
@@ -170,7 +166,7 @@ implements Model, TransactionParticipant
 
     private RelationProvider<Key, ?, ?> getRelationProviderOrNull(final String field)
     {
-        return relationProviderMap.get(field);
+        return map.get(field);
     }
 
     List<TransactionParticipant> getTransactionParticipants()
@@ -266,6 +262,7 @@ implements Model, TransactionParticipant
         return metadata.toArray(ACCESSOR_METADATA);
     }
 
+    //TODO: Move to some data util?
     private static boolean isRelationType(final Class<?> fieldType)
     {
         return Data.class.isAssignableFrom(fieldType) || Data[].class.isAssignableFrom(fieldType);
@@ -291,6 +288,7 @@ implements Model, TransactionParticipant
     {
     }
 
+    // TODO TOO MANY ADD TYPES, MAYBE SIMPLIFY?
     public static final class Builder<Key>
     {
         private final Map<String, RelationProvider<Key, ?, ?>> relationProviderMap = new HashMap<>();

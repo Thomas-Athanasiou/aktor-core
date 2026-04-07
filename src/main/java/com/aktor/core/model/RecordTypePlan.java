@@ -1,6 +1,7 @@
 package com.aktor.core.model;
 
 import com.aktor.core.exception.ConversionException;
+import com.aktor.core.util.RecordAccessorFallbackUtil;
 import com.aktor.core.util.RecordTypeUtil;
 
 import java.lang.reflect.Constructor;

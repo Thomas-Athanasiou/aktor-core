@@ -58,6 +58,8 @@ implements Model
         );
     }
 
+    // TODO REPLACE BiFucntion with custom interface?
+    // TODO Replace mainField/foreignField with FieldNormalizer?
     public RelationProvider(
         final Class<ForeignData> foreignType,
         final Management<ForeignData, ForeignKey> foreignManagement,
@@ -357,10 +359,10 @@ implements Model
         return value;
     }
 
+    // TODO maybe check only for "key.equals()"?
     boolean usesInlineSingularRelationStorage()
     {
-        return "key".equals(mainField)
-            && !"foreign_key".equals(foreignField);
+        return "key".equals(mainField)  && !"foreign_key".equals(foreignField);
     }
 
     @FunctionalInterface

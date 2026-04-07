@@ -1,4 +1,4 @@
-package com.aktor.core.model;
+package com.aktor.core.util;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;

@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
+// TODO POLISH
 public class HttpClient
 implements Model
 {

@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 public final class CollectionProcessor<Item extends Data<Key>, Key>
 {
@@ -43,11 +44,6 @@ public final class CollectionProcessor<Item extends Data<Key>, Key>
         super();
         this.condition = Objects.requireNonNull(condition);
         this.mapper = Objects.requireNonNull(mapper);
-    }
-
-    public SearchResult<Item> process(final List<Item> list, final SearchCriteria searchCriteria) throws SearchException
-    {
-        return process((Iterable<Item>) list, searchCriteria);
     }
 
     public SearchResult<Item> process(final Iterable<Item> items, final SearchCriteria searchCriteria) throws SearchException
@@ -104,7 +100,7 @@ public final class CollectionProcessor<Item extends Data<Key>, Key>
         final SearchCriteria searchCriteria = preparedSearch.criteria();
         final int pageSize = searchCriteria.pageSize();
         final int offset = safeOffset(pageSize, searchCriteria.currentPage());
-        final LinkedHashSet<Key> matchedKeys = new LinkedHashSet<>();
+        final Set<Key> matchedKeys = new LinkedHashSet<>();
         final List<Item> pageItems = new ArrayList<>(Math.max(1, pageSize));
 
         for (final Item item : items)
@@ -129,7 +125,7 @@ public final class CollectionProcessor<Item extends Data<Key>, Key>
     throws ConversionException
     {
         final SearchCriteria searchCriteria = preparedSearch.criteria();
-        final LinkedHashMap<Key, IndexedItem<Item>> matchedItems = new LinkedHashMap<>();
+        final Map<Key, IndexedItem<Item>> matchedItems = new LinkedHashMap<>();
         for (final Item item : items)
         {
             final IndexedItem<Item> indexedItem = indexItem(item, preparedSearch);
@@ -272,7 +268,7 @@ public final class CollectionProcessor<Item extends Data<Key>, Key>
         );
     }
 
-    private static String normalizeField(final String field)
+    private static String normalizeField(final CharSequence field)
     {
         return SimpleDataObjectConverter.camelToSnake(field).toLowerCase(Locale.ROOT);
     }
@@ -387,15 +383,15 @@ public final class CollectionProcessor<Item extends Data<Key>, Key>
         return (int) Math.min(upperBound, size);
     }
 
-    private record PreparedSearch(SearchCriteria criteria, PreparedSortOrder[] sortOrders)
+    record PreparedSearch(SearchCriteria criteria, PreparedSortOrder[] sortOrders)
     {
     }
 
-    private record PreparedSortOrder(String field, boolean ascending)
+    record PreparedSortOrder(String field, boolean ascending)
     {
     }
 
-    private record IndexedItem<Item>(Item item, Object key, Map<String, String> fields, String[] sortValues)
+    record IndexedItem<Item>(Item item, Object key, Map<String, String> fields, String[] sortValues)
     {
     }
 }

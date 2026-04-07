@@ -15,18 +15,15 @@ public interface RepositoryFactory
         Class<Key> keyType
     );
 
-    static RepositoryFactory of(
-        final RepositoryProvider provider,
-        final String name
-    )
+    static RepositoryFactory of(final RepositoryProvider provider, final String name)
     {
         final RepositoryProvider safeProvider = java.util.Objects.requireNonNull(provider);
         final String safeName = java.util.Objects.requireNonNull(name);
+
+        // TODO THIS CONFIG PART IS NASTY
         final String storage = safeProvider.requireConfiguration(safeName + ".storage", "storage");
-        final String kind = safeProvider.requireConfiguration(
-            "storage." + storage + ".kind",
-            "storage kind"
-        );
+        final String kind = safeProvider.requireConfiguration("storage." + storage + ".kind", "storage kind");
+
         for (final RepositoryFactoryLoader loader : ServiceLoader.load(RepositoryFactoryLoader.class))
         {
             if (kind.equals(loader.kind()))

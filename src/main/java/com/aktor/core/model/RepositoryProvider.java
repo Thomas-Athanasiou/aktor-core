@@ -49,7 +49,7 @@ public final class RepositoryProvider
         {
             throw new IllegalArgumentException(label + " is required at configuration path: " + path);
         }
-        if (value.isBlank())
+        else if (value.isBlank())
         {
             throw new IllegalArgumentException(label + " cannot be blank at configuration path: " + path);
         }

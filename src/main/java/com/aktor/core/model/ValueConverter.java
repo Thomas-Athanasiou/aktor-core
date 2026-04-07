@@ -36,9 +36,7 @@ public final class ValueConverter<Key>
         final String sourceField
     ) throws ConversionException, ModelException
     {
-        final String relationField = componentSnakeName == null || componentSnakeName.isBlank()
-            ? sourceField
-            : componentSnakeName;
+        final String relationField = componentSnakeName == null || componentSnakeName.isBlank() ? sourceField : componentSnakeName;
         try
         {
             if (Object.class.equals(target) && context != null && Relation.class.isAssignableFrom(context.itemType()))
@@ -162,11 +160,7 @@ public final class ValueConverter<Key>
         return toKey(rawKey, null, null);
     }
 
-    public Key toKey(
-        final String rawKey,
-        final String keyField,
-        final Class<?> itemType
-    )
+    public Key toKey(final String rawKey, final String keyField, final Class<?> itemType)
     throws ConversionException
     {
         try
@@ -175,12 +169,8 @@ public final class ValueConverter<Key>
         }
         catch (final RuntimeException exception)
         {
-            final String fieldPart = keyField == null || keyField.isBlank()
-                ? "unknown"
-                : keyField;
-            final String itemPart = itemType == null
-                ? "unknown"
-                : itemType.getName();
+            final String fieldPart = keyField == null || keyField.isBlank() ? "unknown" : keyField;
+            final String itemPart = itemType == null ? "unknown" : itemType.getName();
             final String rawPart = String.valueOf(rawKey);
             throw new ConversionException(
                 "Failed to convert key value '"

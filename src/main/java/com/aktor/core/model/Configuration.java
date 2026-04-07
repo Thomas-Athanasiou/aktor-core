@@ -1,5 +1,6 @@
 package com.aktor.core.model;
 
+// TODO REFRACTOR/POLISH/NESTED STRUCTURES
 public interface Configuration
 {
     String getString(String path);

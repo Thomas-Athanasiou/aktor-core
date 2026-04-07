@@ -1,5 +1,6 @@
 package com.aktor.core;
 
+import com.aktor.core.model.FieldNormalizer;
 import com.aktor.core.model.FieldResolver;
 
 import java.util.Objects;
@@ -50,7 +51,7 @@ final class SqlParserUtil
         final SortOrder[] orders,
         final String start,
         final String end,
-        final FieldResolver fieldResolver
+        final FieldNormalizer fieldResolver
     )
     {
         if (orders.length < 1)

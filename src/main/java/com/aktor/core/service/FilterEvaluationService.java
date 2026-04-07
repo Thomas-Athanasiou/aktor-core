@@ -10,6 +10,7 @@ import com.aktor.core.value.Filter;
 import java.util.Map;
 import java.util.Objects;
 
+// TODO Fewer isMatch()
 public final class FilterEvaluationService
 {
     private static final SortOrder[] SORT_ORDERS = new SortOrder[0];
@@ -26,10 +27,7 @@ public final class FilterEvaluationService
         this.searchCriteriaCondition = Objects.requireNonNull(searchCriteriaCondition);
     }
 
-    public boolean isMatch(
-        final DataRow dataRow,
-        final Filter filter
-    )
+    public boolean isMatch(final DataRow dataRow, final Filter filter)
     {
         return isMatch(Objects.requireNonNull(dataRow), allOf(Objects.requireNonNull(filter)));
     }
