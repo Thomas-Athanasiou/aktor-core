@@ -4,17 +4,17 @@ import com.aktor.core.exception.ConversionException;
 
 import java.util.Objects;
 
-abstract class DataRowSqlParserBase<Item>
+abstract class SqlParserBase<Item>
 extends SqlStatementParserBase
 implements Converter<Item, String>
 {
-    private final Converter<Item, DataRow> converter;
+    private final Converter<Item, Row> converter;
 
-    protected DataRowSqlParserBase(
+    protected SqlParserBase(
         final String table,
         final String start,
         final String end,
-        final Converter<Item, DataRow> converter
+        final Converter<Item, Row> converter
     )
     {
         super(table, start, end);

@@ -4,11 +4,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Objects;
 
-public record DataRow(Value[] values)
+public record Row(Value[] values)
 {
     private static final Value[] VALUES = new Value[0];
 
-    public DataRow
+    public Row
     {
         values = Arrays.copyOf(Objects.requireNonNull(values), values.length);
     }
@@ -19,24 +19,18 @@ public record DataRow(Value[] values)
         return Arrays.copyOf(values, values.length);
     }
 
-    public static DataRow empty()
+    public static Row empty()
     {
-        return new DataRow(VALUES);
+        return new Row(VALUES);
     }
 
-    public static DataRow of(final Value... values)
+    public static Row of(final Value... values)
     {
-        return new DataRow(Objects.requireNonNull(values));
+        return new Row(Objects.requireNonNull(values));
     }
 
-    public static DataRow of(final Collection<Value> values)
+    public static Row of(final Collection<Value> values)
     {
-        return new DataRow(Objects.requireNonNull(values).toArray(VALUES));
-    }
-
-    public static DataRow single(final String field, final String value)
-    {
-        return new DataRow(new Value[] {new Value(field, value)});
+        return new Row(Objects.requireNonNull(values).toArray(VALUES));
     }
 }
-

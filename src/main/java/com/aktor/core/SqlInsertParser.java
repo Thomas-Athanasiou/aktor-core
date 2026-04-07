@@ -2,16 +2,17 @@ package com.aktor.core;
 
 import com.aktor.core.exception.ConversionException;
 import com.aktor.core.model.SqlDialect;
-import com.aktor.core.util.DataRowSqlStatementUtil;
+import com.aktor.core.model.SqlDialectResolver;
+import com.aktor.core.util.SqlStatementUtil;
 
-public class DataRowSqlInsertParser<Item>
-extends DataRowSqlParserBase<Item>
+public class SqlInsertParser<Item>
+extends SqlParserBase<Item>
 {
-    public DataRowSqlInsertParser(
+    public SqlInsertParser(
         final String table,
         final String start,
         final String end,
-        final Converter<Item, DataRow> converter
+        final Converter<Item, Row> converter
     )
     {
         super(table, start, end, converter);
@@ -23,18 +24,18 @@ extends DataRowSqlParserBase<Item>
         final Value[] values = requireValues(input);
 
         return  "INSERT INTO " + quotedTable()
-            + "(" + DataRowSqlStatementUtil.columns(values, start, end) + ")"
-            + "VALUES (" + DataRowSqlStatementUtil.placeholders(values.length) + ")";
+            + "(" + SqlStatementUtil.columns(values, start, end) + ")"
+            + "VALUES (" + SqlStatementUtil.placeholders(values.length) + ")";
     }
 
-    public static <Item> DataRowSqlInsertParser<Item> of(
+    public static <Item> SqlInsertParser<Item> of(
         final String table,
-        final Converter<Item, DataRow> converter,
-        final String driver
+        final String driver,
+        final Converter<Item, Row> converter
     )
     {
-        final SqlDialect dialect = ofDialect(driver);
-        return new DataRowSqlInsertParser<>(
+        final SqlDialect dialect = SqlDialectResolver.of(driver);
+        return new SqlInsertParser<>(
             table,
             dialect.quoteStart(),
             dialect.quoteEnd(),

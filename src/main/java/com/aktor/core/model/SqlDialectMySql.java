@@ -28,11 +28,11 @@ extends SqlDialectAbstract
     }
 
     @Override
-    public String upsertClause(final String keyFieldName, final String[] fieldNames)
+    public String upsertClause(final String keyField, final String[] fieldNames)
     {
         final String alias = "new_row";
         final String assignments = toConflictAssignments(
-            keyFieldName,
+            keyField,
             fieldNames,
             fieldName -> quoteField(fieldName) + " = " + alias + "." + quoteField(fieldName)
         );
@@ -40,7 +40,7 @@ extends SqlDialectAbstract
         {
             return "AS " + alias + " ON DUPLICATE KEY UPDATE " + assignments;
         }
-        final String key = quoteField(keyFieldName);
+        final String key = quoteField(keyField);
         return "AS " + alias + " ON DUPLICATE KEY UPDATE " + key + " = " + alias + "." + key;
     }
 }

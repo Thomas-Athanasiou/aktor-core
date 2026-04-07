@@ -6,8 +6,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public class DataParserRecord<Item extends java.lang.Record & Data<?>>
-implements Converter<DataRow, Item>
+public class DataParserRecord<Item extends Record & Data<?>>
+implements Converter<Row, Item>
 {
     private final Mapper<Item, ?> mapper;
 
@@ -17,9 +17,9 @@ implements Converter<DataRow, Item>
         this.mapper = Objects.requireNonNull(mapper);
     }
 
-    public Item convert(final DataRow dataRow) throws ConversionException
+    public Item convert(final Row row) throws ConversionException
     {
-        final Value[] values = dataRow.values();
+        final Value[] values = row.values();
         final Map<String, String> map = new HashMap<>(Math.max(4, values.length * 2));
         for (final Value value : values)
         {

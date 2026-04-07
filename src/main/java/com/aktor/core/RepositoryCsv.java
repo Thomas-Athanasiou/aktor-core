@@ -20,7 +20,7 @@ public class RepositoryCsv<Item extends Data<Key>, Key>
 implements Repository<Item, Key>
 {
     private final String keyField;
-    private final Converter<Item, DataRow> serializer;
+    private final Converter<Item, Row> serializer;
     private final Converter<Map<String, String>, Item> deserializer;
     private final CollectionProcessor<Item, Key> processor;
     private final CsvReader reader;
@@ -29,7 +29,7 @@ implements Repository<Item, Key>
 
     public RepositoryCsv(
         final String keyField,
-        final Converter<Item, DataRow> serializer,
+        final Converter<Item, Row> serializer,
         final Converter<Map<String, String>, Item> deserializer,
         final CsvReader reader,
         final CsvWriter writer
@@ -47,7 +47,7 @@ implements Repository<Item, Key>
 
     public RepositoryCsv(
         final String keyField,
-        final Converter<Item, DataRow> serializer,
+        final Converter<Item, Row> serializer,
         final Converter<Map<String, String>, Item> deserializer,
         final CollectionProcessor<Item, Key> processor,
         final CsvReader reader,

@@ -5,7 +5,7 @@ import static java.util.Map.entry;
 import com.aktor.core.ConditionType;
 import com.aktor.core.FilterGroup;
 import com.aktor.core.Model;
-import com.aktor.core.DataRow;
+import com.aktor.core.Row;
 import com.aktor.core.SearchCriteria;
 import com.aktor.core.util.DataRowUtil;
 
@@ -30,9 +30,9 @@ implements Model
         this(DEFAULT_FILTER_GROUP_CONDITION);
     }
 
-    public boolean isEntityMatch(final DataRow dataRow, final SearchCriteria searchCriteria)
+    public boolean isEntityMatch(final Row row, final SearchCriteria searchCriteria)
     {
-        return isEntityMatch(DataRowUtil.toFieldMap(dataRow), searchCriteria);
+        return isEntityMatch(DataRowUtil.toFieldMap(row), searchCriteria);
     }
 
     public boolean isEntityMatch(final Map<String, String> fieldMap, final SearchCriteria searchCriteria)

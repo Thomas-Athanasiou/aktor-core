@@ -2,7 +2,7 @@ package com.aktor.core.model;
 
 import com.aktor.core.Converter;
 import com.aktor.core.Data;
-import com.aktor.core.DataRow;
+import com.aktor.core.Row;
 import com.aktor.core.FilterGroup;
 import com.aktor.core.SearchCriteria;
 import com.aktor.core.SearchResult;
@@ -37,9 +37,9 @@ public final class CollectionProcessor<Item extends Data<Key>, Key>
 
     private final SearchCriteriaCondition condition;
 
-    private final Converter<Item, DataRow> mapper;
+    private final Converter<Item, Row> mapper;
 
-    public CollectionProcessor(final SearchCriteriaCondition condition, final Converter<Item, DataRow> mapper)
+    public CollectionProcessor(final SearchCriteriaCondition condition, final Converter<Item, Row> mapper)
     {
         super();
         this.condition = Objects.requireNonNull(condition);
@@ -153,8 +153,8 @@ public final class CollectionProcessor<Item extends Data<Key>, Key>
 
     private IndexedItem<Item> indexItem(final Item item, final PreparedSearch preparedSearch) throws ConversionException
     {
-        final DataRow dataRow = mapper.convert(item);
-        final Map<String, String> fields = DataRowUtil.toFieldMap(dataRow);
+        final Row row = mapper.convert(item);
+        final Map<String, String> fields = DataRowUtil.toFieldMap(row);
         final PreparedSortOrder[] sortOrders = preparedSearch.sortOrders();
         final String[] sortValues;
         if (sortOrders.length < 1)

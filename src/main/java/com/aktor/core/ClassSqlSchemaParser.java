@@ -1,6 +1,9 @@
 package com.aktor.core;
+
 import com.aktor.core.exception.ConversionException;
 import com.aktor.core.model.FieldNormalizer;
+import com.aktor.core.model.SqlDialect;
+import com.aktor.core.model.SqlDialectResolver;
 import com.aktor.core.util.RecordTypeUtil;
 import com.aktor.core.util.SimpleDataObjectConverter;
 
@@ -12,43 +15,25 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-public class ClassSqlSchemaParser
+public final class ClassSqlSchemaParser
+extends SqlStatementParserBase
 implements Converter<Class<? extends Data<?>>, String>
 {
-    private final String tableName;
+    private final String keyField;
 
-    private final String keyFieldName;
+    private final FieldNormalizer fieldResolver;
 
-    private final String start;
-
-    private final String end;
-
-    private final FieldNormalizer fieldNameResolver;
-
-    public ClassSqlSchemaParser(
-        final String tableName,
-        final String keyFieldName,
-        final String start,
-        final String end
-    )
-    {
-        this(tableName, keyFieldName, start, end, FieldNormalizer.DEFAULT);
-    }
-
-    public ClassSqlSchemaParser(
-        final String tableName,
-        final String keyFieldName,
+    private ClassSqlSchemaParser(
+        final String table,
+        final String keyField,
         final String start,
         final String end,
-        final FieldNormalizer fieldNameResolver
+        final FieldNormalizer fieldResolver
     )
     {
-        super();
-        this.start = Objects.requireNonNull(start);
-        this.end = Objects.requireNonNull(end);
-        this.tableName = Objects.requireNonNull(tableName);
-        this.keyFieldName = Objects.requireNonNull(keyFieldName);
-        this.fieldNameResolver = Objects.requireNonNull(fieldNameResolver);
+        super(table, start, end);
+        this.keyField = Objects.requireNonNull(keyField);
+        this.fieldResolver = Objects.requireNonNull(fieldResolver);
     }
 
     @Override
@@ -69,7 +54,7 @@ implements Converter<Class<? extends Data<?>>, String>
                     component -> {
                         if (!isRelationComponentType(component.type()))
                         {
-                            final String fieldName = fieldNameResolver.resolve(component.name());
+                            final String fieldName = fieldResolver.resolve(component.name());
                             if (fieldName != null && !fieldName.isBlank())
                             {
                                 columns.put(
@@ -90,7 +75,7 @@ implements Converter<Class<? extends Data<?>>, String>
                         field -> {
                             if (!isRelationComponentType(field.getType()))
                             {
-                                final String fieldName = fieldNameResolver.resolve(field.getName());
+                                final String fieldName = fieldResolver.resolve(field.getName());
                                 if (fieldName != null && !fieldName.isBlank())
                                 {
                                     columns.put(fieldName, mapJavaTypeToSql(resolveSqlComponentType(field.getType())));
@@ -107,7 +92,7 @@ implements Converter<Class<? extends Data<?>>, String>
 
         if (columns.isEmpty())
         {
-            throw new ConversionException("No fields found for table schema in " + tableName);
+            throw new ConversionException("No fields found for table schema in " + table);
         }
 
         final boolean relationType = RelationKeySpec.isRelationType(input);
@@ -116,7 +101,7 @@ implements Converter<Class<? extends Data<?>>, String>
                 entry -> {
                     final String name = entry.getKey();
                     final String value = entry.getValue();
-                    final boolean isKey = !relationType && name.equals(keyFieldName);
+                    final boolean isKey = !relationType && name.equals(keyField);
                     return joinParts(
                         new String[]
                         {
@@ -129,11 +114,11 @@ implements Converter<Class<? extends Data<?>>, String>
             )
             .collect(Collectors.joining(","));
         final String relationPrimaryKeySql = relationType
-            ? ", PRIMARY KEY (" + start + RelationKeySpec.MAIN_FIELD + end + ", " + start + RelationKeySpec.FOREIGN_FIELD + end + ")"
+            ? ", PRIMARY KEY (" + start + RelationKeySpec.MAIN + end + ", " + start + RelationKeySpec.FOREIGN + end + ")"
             : "";
         return "CREATE TABLE IF NOT EXISTS "
             + start
-            + tableName
+            + table
             + end
             + " ("
             + columnSql
@@ -172,5 +157,31 @@ implements Converter<Class<? extends Data<?>>, String>
     private static String joinParts(final String[] parts)
     {
         return Arrays.stream(parts).filter(part -> part != null && !part.isBlank()).collect(Collectors.joining(" "));
+    }
+
+    public static Converter<Class<? extends Data<?>>, String> of(
+        final String table,
+        final String driver,
+        final FieldNormalizer fieldResolver
+    )
+    {
+        return of(table, driver, fieldResolver.resolve(LOGICAL_KEY_FIELD_NAME), fieldResolver);
+    }
+
+    public static Converter<Class<? extends Data<?>>, String> of(
+        final String table,
+        final String driver,
+        final String keyField,
+        final FieldNormalizer fieldResolver
+    )
+    {
+        final SqlDialect dialect = SqlDialectResolver.of(driver);
+        return new ClassSqlSchemaParser(
+            table,
+            keyField,
+            dialect.quoteStart(),
+            dialect.quoteEnd(),
+            fieldResolver
+        );
     }
 }

@@ -1,9 +1,8 @@
 package com.aktor.core.util;
 
-import com.aktor.core.DataRow;
+import com.aktor.core.Row;
 import com.aktor.core.Value;
 import com.aktor.core.exception.ModelException;
-import com.aktor.core.util.SimpleDataObjectConverter;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -16,10 +15,10 @@ public final class DataRowUtil
     {
     }
 
-    public static Value get(final DataRow dataRow, final String field)
+    public static Value get(final Row row, final String field)
     {
         final String normalizedField = normalize(field);
-        for (final Value entityValue : dataRow.values())
+        for (final Value entityValue : row.values())
         {
             if (entityValue != null && normalize(entityValue.field()).equals(normalizedField))
             {
@@ -45,9 +44,9 @@ public final class DataRowUtil
         return value;
     }
 
-    public static Value require(final DataRow dataRow, final String field) throws ModelException
+    public static Value require(final Row row, final String field) throws ModelException
     {
-        final Value value = get(dataRow, field);
+        final Value value = get(row, field);
         if(value == null)
         {
             throw new ModelException(field + " is not set");
@@ -55,18 +54,18 @@ public final class DataRowUtil
         return value;
     }
 
-    public static DataRow addValue(final DataRow dataRow, final Value value)
+    public static Row addValue(final Row row, final Value value)
     {
-        final Value[] originalValues = dataRow.values();
+        final Value[] originalValues = row.values();
         final int originalLength = originalValues.length;
         final Value[] values = Arrays.copyOf(originalValues, originalLength + 1);
         values[originalLength] = value;
-        return DataRow.of(values);
+        return Row.of(values);
     }
 
-    public static Map<String, String> toFieldMap(final DataRow dataRow)
+    public static Map<String, String> toFieldMap(final Row row)
     {
-        final Value[] values = dataRow.values();
+        final Value[] values = row.values();
         final Map<String, String> fieldMap = new HashMap<>(Math.max(4, values.length * 2));
         for (final Value value : values)
         {

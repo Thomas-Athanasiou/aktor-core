@@ -9,11 +9,11 @@ import java.util.Objects;
 
 final class RelationKeySpec
 {
-    static final String MAIN_FIELD = "main_key";
+    static final String MAIN = "main_key";
 
-    static final String FOREIGN_FIELD = "foreign_key";
+    static final String FOREIGN = "foreign_key";
 
-    private static final String[] KEY_FIELDS = new String[] {MAIN_FIELD, FOREIGN_FIELD};
+    private static final String[] KEY_FIELDS = new String[] {MAIN, FOREIGN};
 
     private RelationKeySpec()
     {

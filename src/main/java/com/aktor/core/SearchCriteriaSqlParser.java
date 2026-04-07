@@ -11,13 +11,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-public abstract class SearchCriteriaSqlParserAbstract
+public abstract class SearchCriteriaSqlParser
 extends SqlStatementParserBase
 implements Converter<SearchCriteria, String>
 {
     protected final FieldNormalizer fieldNormalizer;
 
-    protected SearchCriteriaSqlParserAbstract(
+    protected SearchCriteriaSqlParser(
         final String table,
         final String start,
         final String end,

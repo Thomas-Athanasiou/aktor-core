@@ -1,28 +1,29 @@
 package com.aktor.core;
 
 import com.aktor.core.exception.ConversionException;
+import com.aktor.core.model.FieldNormalizer;
 import com.aktor.core.model.SqlDialect;
 import com.aktor.core.model.SqlDialectResolver;
-import com.aktor.core.util.DataRowSqlStatementUtil;
+import com.aktor.core.util.SqlStatementUtil;
 
 import java.util.Objects;
 
-public final class DataRowSqlUpsertParser<Item>
-extends DataRowSqlParserBase<Item>
+public final class SqlUpsertParser<Item>
+extends SqlParserBase<Item>
 {
-    private final String keyFieldName;
+    private final String keyField;
 
     private final SqlDialect dialect;
 
-    private DataRowSqlUpsertParser(
+    private SqlUpsertParser(
         final String tableName,
         final String keyField,
         final SqlDialect dialect,
-        final Converter<Item, DataRow> converter
+        final Converter<Item, Row> converter
     )
     {
         super(tableName, Objects.requireNonNull(dialect).quoteStart(), dialect.quoteEnd(), converter);
-        this.keyFieldName = Objects.requireNonNull(keyField);
+        this.keyField = Objects.requireNonNull(keyField);
         this.dialect = dialect;
     }
 
@@ -39,12 +40,12 @@ extends DataRowSqlParserBase<Item>
         return "INSERT INTO "
             + quotedTable()
             + "("
-            + DataRowSqlStatementUtil.columns(values, start, end)
+            + SqlStatementUtil.columns(values, start, end)
             + ")"
             + " VALUES ("
-            + DataRowSqlStatementUtil.placeholders(values.length)
+            + SqlStatementUtil.placeholders(values.length)
             + ") "
-            + dialect.upsertClause(keyFieldName, fields(values));
+            + dialect.upsertClause(keyField, fields(values));
     }
 
     private static String[] fields(final Value[] values)
@@ -57,18 +58,18 @@ extends DataRowSqlParserBase<Item>
         return fields;
     }
 
-    private static <Item> Converter<Item, String> of(
+    public static <Item> Converter<Item, String> of(
         final String table,
-        final String keyField,
-        final Converter<Item, DataRow> converter,
-        final String driver
-    )
+        final String driver,
+        final Converter<Item, Row> converter,
+        final FieldNormalizer fieldNormalizer
+        )
     {
         final SqlDialect dialect = SqlDialectResolver.of(driver);
         if (!dialect.supportsUpsert())
         {
             return null;
         }
-        return new DataRowSqlUpsertParser<>(table, keyField, dialect, converter);
+        return new SqlUpsertParser<>(table, fieldNormalizer.resolve(LOGICAL_KEY_FIELD_NAME), dialect, converter);
     }
 }

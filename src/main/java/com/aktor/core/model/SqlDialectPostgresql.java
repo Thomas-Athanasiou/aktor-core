@@ -28,11 +28,11 @@ extends SqlDialectAbstract
     }
 
     @Override
-    public String upsertClause(final String keyFieldName, final String[] fieldNames)
+    public String upsertClause(final String keyField, final String[] fieldNames)
     {
-        final String key = quoteField(keyFieldName);
+        final String key = quoteField(keyField);
         final String assignments = toConflictAssignments(
-            keyFieldName,
+            keyField,
             fieldNames,
             fieldName -> quoteField(fieldName) + " = EXCLUDED." + quoteField(fieldName)
         );

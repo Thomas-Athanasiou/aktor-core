@@ -1,6 +1,6 @@
 package com.aktor.core.service;
 
-import com.aktor.core.DataRow;
+import com.aktor.core.Row;
 import com.aktor.core.FilterGroup;
 import com.aktor.core.SearchCriteria;
 import com.aktor.core.SortOrder;
@@ -27,9 +27,9 @@ public final class FilterEvaluationService
         this.searchCriteriaCondition = Objects.requireNonNull(searchCriteriaCondition);
     }
 
-    public boolean isMatch(final DataRow dataRow, final Filter filter)
+    public boolean isMatch(final Row row, final Filter filter)
     {
-        return isMatch(Objects.requireNonNull(dataRow), allOf(Objects.requireNonNull(filter)));
+        return isMatch(Objects.requireNonNull(row), allOf(Objects.requireNonNull(filter)));
     }
 
     public boolean isMatch(
@@ -41,11 +41,11 @@ public final class FilterEvaluationService
     }
 
     public boolean isMatch(
-        final DataRow dataRow,
+        final Row row,
         final FilterGroup filterGroup
     )
     {
-        return isMatch(Objects.requireNonNull(dataRow), criteria(Objects.requireNonNull(filterGroup)));
+        return isMatch(Objects.requireNonNull(row), criteria(Objects.requireNonNull(filterGroup)));
     }
 
     public boolean isMatch(
@@ -57,12 +57,12 @@ public final class FilterEvaluationService
     }
 
     public boolean isMatch(
-        final DataRow dataRow,
+        final Row row,
         final SearchCriteria searchCriteria
     )
     {
         return searchCriteriaCondition.isEntityMatch(
-            Objects.requireNonNull(dataRow),
+            Objects.requireNonNull(row),
             Objects.requireNonNull(searchCriteria)
         );
     }
@@ -79,11 +79,11 @@ public final class FilterEvaluationService
     }
 
     public boolean isMatchAll(
-        final DataRow dataRow,
+        final Row row,
         final Filter... filters
     )
     {
-        return isMatch(Objects.requireNonNull(dataRow), allOf(filters));
+        return isMatch(Objects.requireNonNull(row), allOf(filters));
     }
 
     public boolean isMatchAll(

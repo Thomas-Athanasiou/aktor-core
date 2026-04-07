@@ -9,7 +9,7 @@ import com.aktor.core.util.SimpleDataObjectConverter;
 import java.util.Objects;
 
 public final class DataRowMapper<Item extends Data<Key>, Key>
-implements Converter<Item, DataRow>
+implements Converter<Item, Row>
 {
     private final FieldNormalizer fieldResolver;
 
@@ -29,9 +29,9 @@ implements Converter<Item, DataRow>
     }
 
     @Override
-    public DataRow convert(final Item item) throws ConversionException
+    public Row convert(final Item item) throws ConversionException
     {
-        final DataRow dataRow;
+        final Row row;
         try
         {
             final Class<?> type = item.getClass();
@@ -52,13 +52,13 @@ implements Converter<Item, DataRow>
                 }
             }
 
-            dataRow = DataRow.of(valueCount == size ? values : java.util.Arrays.copyOf(values, valueCount));
+            row = Row.of(valueCount == size ? values : java.util.Arrays.copyOf(values, valueCount));
         }
         catch (final IllegalArgumentException exception)
         {
             throw new ConversionException(exception);
         }
-        return dataRow;
+        return row;
     }
 
     private static boolean isScalarComponent(final Class<?> ownerType, final Class<?> componentType)

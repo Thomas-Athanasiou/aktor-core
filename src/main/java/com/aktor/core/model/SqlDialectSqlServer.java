@@ -30,7 +30,7 @@ extends SqlDialectAbstract
     }
 
     @Override
-    public String upsertClause(final String keyFieldName, final String[] fieldNames)
+    public String upsertClause(final String keyField, final String[] fieldNames)
     {
         throw new UnsupportedOperationException("SQL Server dialect upsert is not supported");
     }

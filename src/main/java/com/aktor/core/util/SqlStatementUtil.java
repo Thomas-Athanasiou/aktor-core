@@ -2,9 +2,9 @@ package com.aktor.core.util;
 
 import com.aktor.core.Value;
 
-public final class DataRowSqlStatementUtil
+public final class SqlStatementUtil
 {
-    private DataRowSqlStatementUtil()
+    private SqlStatementUtil()
     {
         super();
     }

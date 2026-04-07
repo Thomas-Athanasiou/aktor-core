@@ -13,7 +13,8 @@ public class DataParserResultSet<Item extends java.lang.Record & Data<?>>
 implements Converter<ResultSet, Item>
 {
     private final Mapper<Item, ?> mapper;
-    private volatile ColumnLayout cachedLayout;
+
+    private volatile ColumnLayout cachedLayout = null;
 
     public DataParserResultSet(final Mapper<Item, ?> mapper)
     {
@@ -96,7 +97,7 @@ implements Converter<ResultSet, Item>
         return key;
     }
 
-    private record ColumnLayout(ResultSet resultSet, String[] columnKeys)
+    record ColumnLayout(ResultSet resultSet, String[] columnKeys)
     {
     }
 }

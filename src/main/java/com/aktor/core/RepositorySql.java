@@ -1,12 +1,17 @@
 package com.aktor.core;
 
-import com.aktor.core.exception.*;
+import com.aktor.core.exception.ConversionException;
+import com.aktor.core.exception.DeleteException;
+import com.aktor.core.exception.GetException;
+import com.aktor.core.exception.SaveException;
+import com.aktor.core.exception.SearchException;
 import com.aktor.core.model.FieldResolver;
 import com.aktor.core.model.RelationProviderResolver;
+import com.aktor.core.model.SqlDialect;
+import com.aktor.core.model.SqlDialectResolver;
 import com.aktor.core.model.TransactionParticipant;
 import com.aktor.core.model.TransactionOrchestrator;
 import com.aktor.core.util.CsvValuesUtil;
-import com.aktor.core.util.SqlUtil;
 import com.aktor.core.value.Filter;
 
 import java.sql.Connection;
@@ -17,60 +22,39 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class RepositorySql<Item extends java.lang.Record & Data<Key>, Key>
+public final class RepositorySql<Item extends Record & Data<Key>, Key>
 implements Repository<Item, Key>, TransactionParticipant
 {
     private static final String LOGICAL_KEY_FIELD_NAME = "key";
+
     private final Connection connection;
-
     private final Class<? extends Data<?>> type;
-
-    private final Converter<Item, DataRow> serializer;
-
+    private final Converter<Item, Row> serializer;
     private final Converter<ResultSet, Item> mapper;
-
     private final Converter<SearchCriteria, String> searchSerializer;
-
     private final Converter<Item, String> updateParser;
-
     private final Converter<Item, String> insertParser;
-
-    private final Converter<Key, String> getSerializer;
-
-    private final Converter<Key, String> deleteSerializer;
-
     private final Converter<SearchCriteria, String> totalCountSerializer;
-
     private final Converter<Class<? extends Data<?>>, String> schemaSerializer;
-
     private final Converter<Item, String> upsertParser;
-
-    private final RepositoryIdentity identity;
-
     private final String fixedGetSql;
-
     private final String fixedDeleteSql;
 
     private volatile boolean schemaChecked = false;
 
     private int transactionDepth = 0;
-
     private boolean ownsTransaction = false;
-
-    private PreparedStatement cachedGetStatement;
-
-    private PreparedStatement cachedDeleteStatement;
+    private PreparedStatement cachedGetStatement = null;
+    private PreparedStatement cachedDeleteStatement = null;
 
     private RepositorySql(
         final Connection connection,
         final Class<? extends Data<?>> type,
-        final Converter<Item, DataRow> serializer,
+        final Converter<Item, Row> serializer,
         final Converter<ResultSet, Item> mapper,
-        final Converter<Key, String> getSerializer,
         final Converter<SearchCriteria, String> searchSerializer,
         final Converter<Item, String> updateParser,
         final Converter<Item, String> insertParser,
-        final Converter<Key, String> deleteSerializer,
         final Converter<SearchCriteria, String> totalCountSerializer,
         final Converter<Class<? extends Data<?>>, String> schemaSerializer,
         final Converter<Item, String> upsertParser,
@@ -78,280 +62,112 @@ implements Repository<Item, Key>, TransactionParticipant
         final String fixedDeleteSql
     )
     {
-        super();
         this.connection = Objects.requireNonNull(connection);
         this.type = Objects.requireNonNull(type);
         this.serializer = Objects.requireNonNull(serializer);
         this.mapper = Objects.requireNonNull(mapper);
-        this.getSerializer = Objects.requireNonNull(getSerializer);
         this.searchSerializer = Objects.requireNonNull(searchSerializer);
         this.updateParser = Objects.requireNonNull(updateParser);
         this.insertParser = Objects.requireNonNull(insertParser);
-        this.deleteSerializer = Objects.requireNonNull(deleteSerializer);
         this.totalCountSerializer = Objects.requireNonNull(totalCountSerializer);
         this.schemaSerializer = Objects.requireNonNull(schemaSerializer);
         this.upsertParser = upsertParser;
-        this.identity = RepositoryIdentity.of(type);
-        this.fixedGetSql = fixedGetSql;
-        this.fixedDeleteSql = fixedDeleteSql;
+        this.fixedGetSql = Objects.requireNonNull(fixedGetSql);
+        this.fixedDeleteSql = Objects.requireNonNull(fixedDeleteSql);
     }
 
-    public RepositorySql(
+    public static <Item extends Record & Data<Key>, Key> Repository<Item, Key> of(
         final Connection connection,
         final Class<Item> type,
-        final String tableName,
-        final String driverName
+        final String table,
+        final String driver
     )
     {
-        this(connection, type, tableName, FieldResolver.mapped(type), driverName);
+        return of(connection, type, table, driver, FieldResolver.mapped(type), new RelationProviderResolver<>());
     }
 
-    public RepositorySql(
+    public static <Item extends Record & Data<Key>, Key> Repository<Item, Key> of(
         final Connection connection,
         final Class<Item> type,
-        final String tableName,
-        final RelationProviderResolver<Key> relationProviderResolver,
-        final String driverName
+        final String table,
+        final String driver,
+        final RelationProviderResolver<Key> relationProviderResolver
     )
     {
-        this(connection, type, tableName, FieldResolver.mapped(type), relationProviderResolver, driverName);
+        return of(connection, type, table, driver, FieldResolver.mapped(type), relationProviderResolver);
     }
 
-    public RepositorySql(
+    public static <Item extends Record & Data<Key>, Key> Repository<Item, Key> of(
         final Connection connection,
         final Class<Item> type,
-        final String tableName,
-        final FieldResolver fieldResolver,
-        final String driverName
-    )
-    {
-        this(connection, type, tableName, fieldResolver, new RelationProviderResolver<>(), driverName);
-    }
-
-    public RepositorySql(
-        final Connection connection,
-        final Class<Item> type,
-        final String tableName,
-        final FieldResolver fieldResolver,
-        final RelationProviderResolver<Key> relationProviderResolver,
-        final String driverName
-    )
-    {
-        this(
-            connection,
-            type,
-            createResultSetParser(type, fieldResolver, relationProviderResolver),
-            createSqlParsers(
-                type,
-                tableName,
-                driverName,
-                fieldResolver
-            )
-        );
-    }
-
-    private RepositorySql(
-        final Connection connection,
-        final Class<? extends Data<?>> type,
-        final Converter<ResultSet, Item> mapper,
-        final SqlParsers<Item, Key> sqlParsers
-    )
-    {
-        this(
-            connection,
-            type,
-            sqlParsers.serializer(),
-            mapper,
-            sqlParsers.getSerializer(),
-            sqlParsers.searchSerializer(),
-            sqlParsers.updateParser(),
-            sqlParsers.insertParser(),
-            sqlParsers.deleteSerializer(),
-            sqlParsers.totalCountSerializer(),
-            sqlParsers.schemaSerializer(),
-            sqlParsers.upsertParser(),
-            sqlParsers.fixedGetSql(),
-            sqlParsers.fixedDeleteSql()
-        );
-    }
-
-    private static <Item extends java.lang.Record & Data<Key>, Key> SqlParsers<Item, Key> createSqlParsers(
-        final Class<? extends Data<?>> type,
-        final String tableName,
-        final String driverName
-    )
-    {
-        return new SqlParsersFactory<Item, Key>(type, tableName, driverName, FieldResolver.mapped(type)).create();
-    }
-
-    private static <Item extends Record & Data<Key>, Key> SqlParsers<Item, Key> createSqlParsers(
-        final Class<? extends Data<?>> type,
-        final String tableName,
-        final String driverName,
+        final String table,
+        final String driver,
         final FieldResolver fieldResolver
     )
     {
-        return new SqlParsersFactory<Item, Key>(type, tableName, driverName, fieldResolver).create();
+        return of(connection, type, table, driver, fieldResolver, new RelationProviderResolver<>());
     }
 
-    private static <Item extends Record & Data<Key>, Key> Converter<ResultSet, Item> createResultSetParser(
+    public static <Item extends Record & Data<Key>, Key> Repository<Item, Key> of(
+        final Connection connection,
         final Class<Item> type,
+        final String table,
+        final String driver,
         final FieldResolver fieldResolver,
         final RelationProviderResolver<Key> relationProviderResolver
     )
     {
-        final Mapper<Item, Key> mapper = new Mapper<>(fieldResolver, relationProviderResolver, type);
-        return new DataParserResultSet<>(mapper);
-    }
-
-    record SqlParsers<Item extends Record & Data<Key>, Key>(
-        Converter<Item, DataRow> serializer,
-        Converter<Key, String> getSerializer,
-        Converter<SearchCriteria, String> searchSerializer,
-        Converter<Item, String> updateParser,
-        Converter<Item, String> insertParser,
-        Converter<Key, String> deleteSerializer,
-        Converter<SearchCriteria, String> totalCountSerializer,
-        Converter<Class<? extends Data<?>>, String> schemaSerializer,
-        Converter<Item, String> upsertParser,
-        String fixedGetSql,
-        String fixedDeleteSql
-    )
-    {
-
-    }
-
-    private static final class SqlParsersFactory<Item extends Record & Data<Key>, Key>
-    {
-        private final String tableName;
-
-        private final String driverName;
-
-        private final DataRowMapper<Item, Key> dataRowMapper;
-
-        private final RepositoryIdentity identity;
-
-        private final com.aktor.core.model.SqlDialect sqlDialect;
-
-        private final FieldResolver fieldResolver;
-
-        private SqlParsersFactory(
-            final Class<? extends Data<?>> type,
-            final String tableName,
-            final String driverName,
-            final FieldResolver fieldResolver
-        )
-        {
-            super();
-            this.tableName = Objects.requireNonNull(tableName);
-            this.driverName = Objects.requireNonNull(driverName);
-            this.dataRowMapper = new DataRowMapper<>(fieldResolver);
-            final Class<? extends Data<?>> safeType = Objects.requireNonNull(type);
-            this.identity = RepositoryIdentity.of(safeType);
-            this.sqlDialect = SqlUtil.ofDialect(driverName);
-            this.fieldResolver = Objects.requireNonNull(fieldResolver);
-        }
-
-        private SqlParsers<Item, Key> create()
-        {
-            final String[] keyFieldNames = identity.keyFieldNames(fieldResolver.resolve(LOGICAL_KEY_FIELD_NAME));
-            return new SqlParsers<>(
-                dataRowMapper,
-                new KeySqlSelectParser<>(tableName, keyFieldNames, sqlDialect.quoteStart(), sqlDialect.quoteEnd()),
-                new SearchCriteriaSqlSearchParser(
-                    tableName,
-                    sqlDialect.quoteStart(),
-                    sqlDialect.quoteEnd(),
-                    sqlDialect,
-                    fieldResolver
-                ),
-                new DataRowSqlUpdateParser<>(tableName, keyFieldNames, sqlDialect.quoteStart(), sqlDialect.quoteEnd(), dataRowMapper),
-                SqlUtil.ofDataRowInsertParser(tableName, dataRowMapper, driverName),
-                new KeySqlDeleteParser<>(tableName, keyFieldNames, sqlDialect.quoteStart(), sqlDialect.quoteEnd()),
-                new SearchCriteriaSqlTotalCountParser(
-                    tableName,
-                    sqlDialect.quoteStart(),
-                    sqlDialect.quoteEnd(),
-                    fieldResolver
-                ),
-                SqlUtil.ofClassSchemaParser(tableName, driverName, fieldResolver),
-                identity.supportsNativeUpsert()
-                    ? SqlUtil.ofDataRowUpsertParser(tableName, dataRowMapper, driverName)
-                    : null,
-                SqlParserUtil.selectByKeySql(tableName, keyFieldNames, sqlDialect.quoteStart(), sqlDialect.quoteEnd()),
-                SqlParserUtil.deleteByKeySql(tableName, keyFieldNames, sqlDialect.quoteStart(), sqlDialect.quoteEnd())
-            );
-        }
+        final FieldResolver safeFieldResolver = Objects.requireNonNull(fieldResolver);
+        final SqlDialect sqlDialect = SqlDialectResolver.of(driver);
+        final DataRowMapper<Item, Key> dataRowMapper = new DataRowMapper<>(safeFieldResolver);
+        final String keyFieldName = Objects.requireNonNull(safeFieldResolver.resolve(LOGICAL_KEY_FIELD_NAME));
+        return new RepositorySql<>(
+            connection,
+            type,
+            dataRowMapper,
+            createResultSetParser(type, safeFieldResolver, relationProviderResolver),
+            SearchCriteriaSqlSearchParser.of(table, driver, safeFieldResolver),
+            SqlUpdateParser.of(table, driver, dataRowMapper, safeFieldResolver),
+            SqlInsertParser.of(table, driver, dataRowMapper),
+            SearchCriteriaSqlTotalCountParser.of(table, driver, safeFieldResolver),
+            ClassSqlSchemaParser.of(table, driver, safeFieldResolver),
+            SqlUpsertParser.of(table, driver, dataRowMapper, safeFieldResolver),
+            SqlParserUtil.selectByKeySql(table, new String[]{keyFieldName}, sqlDialect.quoteStart(), sqlDialect.quoteEnd()),
+            SqlParserUtil.deleteByKeySql(table, new String[]{keyFieldName}, sqlDialect.quoteStart(), sqlDialect.quoteEnd())
+        );
     }
 
     @Override
     public Item get(final Key key) throws GetException
     {
-        final Item item;
-
         try
         {
             ensureSchema();
-        }
-        catch (final Exception exception)
-        {
-            throw new GetException(exception);
-        }
-
-        if (fixedGetSql != null)
-        {
-            try
+            synchronized (this)
             {
-                synchronized (this)
-                {
-                    final PreparedStatement statement = getCachedGetStatement();
-                    statement.clearParameters();
-                    bindKeyParameters(statement, key);
-                    try (final ResultSet resultSet = statement.executeQuery())
-                    {
-                        if (resultSet.next())
-                        {
-                            item = mapper.convert(resultSet);
-                        }
-                        else
-                        {
-                            throw new GetException(
-                                "The item with key identity of '" + key + "' that was requested doesn't exist, verify the item and try again"
-                            );
-                        }
-                    }
-                }
-            }
-            catch (final SQLException | ConversionException exception)
-            {
-                throw new GetException(exception);
-            }
-        }
-        else
-        {
-            try (final PreparedStatement statement = connection.prepareStatement(getSerializer.convert(key)))
-            {
-                bindKeyParameters(statement, key);
+                final PreparedStatement statement = getCachedGetStatement();
+                statement.clearParameters();
+                bindKeyParameter(statement, key);
                 try (final ResultSet resultSet = statement.executeQuery())
                 {
                     if (resultSet.next())
                     {
-                        item = mapper.convert(resultSet);
-                    }
-                    else
-                    {
-                        throw new GetException(
-                            "The item with key identity of '" + key + "' that was requested doesn't exist, verify the item and try again"
-                        );
+                        return mapper.convert(resultSet);
                     }
                 }
             }
-            catch (final SQLException | ConversionException exception)
-            {
-                throw new GetException(exception);
-            }
+            throw new GetException(
+                "The item with key identity of '" + key + "' that was requested doesn't exist, verify the item and try again"
+            );
         }
-        return item;
+        catch (final Exception exception)
+        {
+            if (exception instanceof final GetException getException)
+            {
+                throw getException;
+            }
+            throw new GetException(exception);
+        }
     }
 
     @Override
@@ -363,12 +179,11 @@ implements Repository<Item, Key>, TransactionParticipant
         }
         final int totalCount = searchTotalCount(searchCriteria);
         final List<Item> results = new ArrayList<>(Math.min(totalCount, searchCriteria.pageSize()));
-        if(totalCount > 0)
+        if (totalCount > 0)
         {
             try (final PreparedStatement statement = connection.prepareStatement(searchSerializer.convert(searchCriteria)))
             {
-                RepositorySql.bindSearchParameters(statement, searchCriteria);
-
+                bindSearchParameters(statement, searchCriteria);
                 try (final ResultSet resultSet = statement.executeQuery())
                 {
                     while (resultSet.next())
@@ -413,39 +228,6 @@ implements Repository<Item, Key>, TransactionParticipant
         }
     }
 
-    private void saveWithFallback(final Item item) throws SaveException
-    {
-        if (update(item) < 1)
-        {
-            try
-            {
-                insert(item);
-            }
-            catch (final SaveException exception)
-            {
-                if (update(item) < 1)
-                {
-                    throw exception;
-                }
-            }
-        }
-    }
-
-    private void upsert(final Item item) throws SaveException
-    {
-        executeWrite(item, upsertParser, null);
-    }
-
-    private int update(final Item item) throws SaveException
-    {
-        return executeWrite(item, updateParser, identity::bindKeyParameters);
-    }
-
-    private void insert(final Item item) throws SaveException
-    {
-        executeWrite(item, insertParser, null);
-    }
-
     @Override
     public synchronized void delete(final Item item) throws DeleteException
     {
@@ -453,23 +235,11 @@ implements Repository<Item, Key>, TransactionParticipant
         {
             executeWithinTransaction(
                 () -> {
-                    if (fixedDeleteSql != null)
-                    {
-                        final PreparedStatement statement = getCachedDeleteStatement();
-                        statement.clearParameters();
-                        ensureSchema();
-                        bindKeyParameters(statement, item.key());
-                        statement.executeUpdate();
-                    }
-                    else
-                    {
-                        try (final PreparedStatement statement = connection.prepareStatement(deleteSerializer.convert(item.key())))
-                        {
-                            ensureSchema();
-                            bindKeyParameters(statement, item.key());
-                            statement.executeUpdate();
-                        }
-                    }
+                    final PreparedStatement statement = getCachedDeleteStatement();
+                    statement.clearParameters();
+                    ensureSchema();
+                    bindKeyParameter(statement, item.key());
+                    statement.executeUpdate();
                 }
             );
         }
@@ -500,8 +270,7 @@ implements Repository<Item, Key>, TransactionParticipant
     @Override
     public synchronized void commitTransaction() throws SQLException
     {
-        final boolean canCommit = transactionDepth > 0;
-        if (canCommit)
+        if (transactionDepth > 0)
         {
             transactionDepth--;
             if (transactionDepth == 0 && ownsTransaction)
@@ -522,8 +291,7 @@ implements Repository<Item, Key>, TransactionParticipant
     @Override
     public synchronized void rollbackTransaction() throws SQLException
     {
-        final boolean canRollback = transactionDepth > 0;
-        if (canRollback)
+        if (transactionDepth > 0)
         {
             transactionDepth = 0;
             if (ownsTransaction)
@@ -541,49 +309,96 @@ implements Repository<Item, Key>, TransactionParticipant
         }
     }
 
-    private int searchTotalCount(final SearchCriteria searchCriteria) throws SearchException
+    private void saveWithFallback(final Item item) throws SaveException
     {
-        final int totalCount;
-
-        try
+        if (update(item) < 1)
         {
-            ensureSchema();
-        }
-        catch (final ConversionException | SQLException exception)
-        {
-            throw new SearchException(exception);
-        }
-
-        try (final PreparedStatement statement = connection.prepareStatement(totalCountSerializer.convert(searchCriteria)))
-        {
-            RepositorySql.bindSearchParameters(statement, searchCriteria);
-
-            try (final ResultSet resultSet = statement.executeQuery())
+            try
             {
-                if (resultSet.next())
+                insert(item);
+            }
+            catch (final SaveException exception)
+            {
+                if (update(item) < 1)
                 {
-                    final long value = resultSet.getLong(1);
-                    if (resultSet.wasNull())
-                    {
-                        throw new SearchException("Total count query returned NULL");
-                    }
-                    else if (value < 0L || value > Integer.MAX_VALUE)
-                    {
-                        throw new SearchException("Total count out of int range: " + value);
-                    }
-                    totalCount = (int) value;
-                }
-                else
-                {
-                    throw new SearchException("No results in total count query");
+                    throw exception;
                 }
             }
         }
-        catch (final SQLException | ConversionException exception)
+    }
+
+    private void upsert(final Item item) throws SaveException
+    {
+        executeWrite(item, upsertParser, false);
+    }
+
+    private int update(final Item item) throws SaveException
+    {
+        return executeWrite(item, updateParser, true);
+    }
+
+    private void insert(final Item item) throws SaveException
+    {
+        executeWrite(item, insertParser, false);
+    }
+
+    private int searchTotalCount(final SearchCriteria searchCriteria) throws SearchException
+    {
+        try
         {
+            ensureSchema();
+            try (final PreparedStatement statement = connection.prepareStatement(totalCountSerializer.convert(searchCriteria)))
+            {
+                bindSearchParameters(statement, searchCriteria);
+                try (final ResultSet resultSet = statement.executeQuery())
+                {
+                    if (resultSet.next())
+                    {
+                        final long value = resultSet.getLong(1);
+                        if (resultSet.wasNull())
+                        {
+                            throw new SearchException("Total count query returned NULL");
+                        }
+                        if (value < 0L || value > Integer.MAX_VALUE)
+                        {
+                            throw new SearchException("Total count out of int range: " + value);
+                        }
+                        return (int) value;
+                    }
+                }
+            }
+            throw new SearchException("No results in total count query");
+        }
+        catch (final Exception exception)
+        {
+            if (exception instanceof final SearchException searchException)
+            {
+                throw searchException;
+            }
             throw new SearchException(exception);
         }
-        return totalCount;
+    }
+
+    private int executeWrite(final Item item, final Converter<Item, String> parser, final boolean bind) throws SaveException
+    {
+        try
+        {
+            ensureSchema();
+            final Value[] values = serializer.convert(item).values();
+            try (final PreparedStatement statement = connection.prepareStatement(parser.convert(item)))
+            {
+                bindValueParameters(statement, values);
+                if (bind)
+                {
+                    bindKeyParameter(statement, values.length + 1, item.key());
+                }
+                return statement.executeUpdate();
+            }
+        }
+        catch (final ConversionException | SQLException exception)
+        {
+            throw new SaveException(exception);
+        }
     }
 
     private static void bindSearchParameters(final PreparedStatement statement, final SearchCriteria searchCriteria)
@@ -614,32 +429,6 @@ implements Repository<Item, Key>, TransactionParticipant
         }
     }
 
-    private int executeWrite(
-        final Item item,
-        final Converter<Item, String> sqlParser,
-        final KeyParameterBinder<Key> keyParameterBinder
-    ) throws SaveException
-    {
-        try
-        {
-            ensureSchema();
-            final Value[] values = serializer.convert(item).values();
-            try (final PreparedStatement statement = connection.prepareStatement(sqlParser.convert(item)))
-            {
-                bindValueParameters(statement, values);
-                if (keyParameterBinder != null)
-                {
-                    bindKeyParameters(statement, values.length + 1, item.key(), keyParameterBinder);
-                }
-                return statement.executeUpdate();
-            }
-        }
-        catch (final ConversionException | SQLException exception)
-        {
-            throw new SaveException(exception);
-        }
-    }
-
     private static void bindValueParameters(final PreparedStatement statement, final Value[] values) throws SQLException
     {
         for (int index = 0; index < values.length; index++)
@@ -648,20 +437,15 @@ implements Repository<Item, Key>, TransactionParticipant
         }
     }
 
-    private void bindKeyParameters(final PreparedStatement statement, final Key key)
-    throws SQLException, ConversionException
+    private void bindKeyParameter(final PreparedStatement statement, final Key key)
+    throws SQLException
     {
-        bindKeyParameters(statement, 1, key, identity::bindKeyParameters);
+        bindKeyParameter(statement, 1, key);
     }
 
-    private void bindKeyParameters(
-        final PreparedStatement statement,
-        final int parameterIndex,
-        final Key key,
-        final KeyParameterBinder<Key> keyParameterBinder
-    ) throws SQLException, ConversionException
+    private void bindKeyParameter(final PreparedStatement statement, final int index, final Key key) throws SQLException
     {
-        keyParameterBinder.bind(statement, parameterIndex, key);
+        statement.setObject(index, key);
     }
 
     private void executeWithinTransaction(final SqlOperation operation) throws Exception
@@ -705,10 +489,13 @@ implements Repository<Item, Key>, TransactionParticipant
         return cachedDeleteStatement;
     }
 
-    @FunctionalInterface
-    private interface KeyParameterBinder<Key>
+    private static <Item extends Record & Data<Key>, Key> Converter<ResultSet, Item> createResultSetParser(
+        final Class<Item> type,
+        final FieldResolver fieldResolver,
+        final RelationProviderResolver<Key> relationProviderResolver
+    )
     {
-        void bind(PreparedStatement statement, int parameterIndex, Key key) throws SQLException, ConversionException;
+        return new DataParserResultSet<>(new Mapper<Item, Key>(fieldResolver, relationProviderResolver, type));
     }
 
     @FunctionalInterface

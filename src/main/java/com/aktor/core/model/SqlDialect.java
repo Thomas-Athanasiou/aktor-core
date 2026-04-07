@@ -15,7 +15,7 @@ extends Model
 
     boolean supportsUpsert();
 
-    String upsertClause(String keyFieldName, String[] fieldNames);
+    String upsertClause(String keyField, String[] fieldNames);
 
     String paginationClause(SearchCriteria searchCriteria, String orderByClause);
 

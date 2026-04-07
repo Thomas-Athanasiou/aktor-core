@@ -4,6 +4,8 @@ import java.util.Objects;
 
 class SqlStatementParserBase
 {
+    protected final static String LOGICAL_KEY_FIELD_NAME = "key";
+
     protected final String table;
     protected final String start;
     protected final String end;

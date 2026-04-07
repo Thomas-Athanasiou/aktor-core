@@ -18,7 +18,7 @@ final class PropertiesDataRowCodec
         super();
     }
 
-    static DataRow deserialize(final String input) throws ConversionException
+    static Row deserialize(final String input) throws ConversionException
     {
         try
         {
@@ -29,7 +29,7 @@ final class PropertiesDataRowCodec
             {
                 values.add(new Value(entry.getKey().toString(), entry.getValue().toString()));
             }
-            return DataRow.of(values.toArray(VALUES));
+            return Row.of(values.toArray(VALUES));
         }
         catch (final IOException exception)
         {
@@ -37,13 +37,13 @@ final class PropertiesDataRowCodec
         }
     }
 
-    static String serialize(final DataRow dataRow) throws ConversionException
+    static String serialize(final Row row) throws ConversionException
     {
         final StringWriter writer = new StringWriter();
         try
         {
             final Properties properties = new Properties();
-            final Value[] values = dataRow.values();
+            final Value[] values = row.values();
             for (final Value value : values)
             {
                 properties.setProperty(value.field(), value.value());
