@@ -35,7 +35,7 @@ implements Converter<SearchCriteria, String>
         {
             if (part != null && !part.isBlank())
             {
-                if (!builder.isEmpty())
+                if (builder.length() > 0)
                 {
                     builder.append(' ');
                 }

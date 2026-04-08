@@ -2,6 +2,11 @@ package com.aktor.core.model;
 
 import com.aktor.core.Data;
 import com.aktor.core.Repository;
+import com.aktor.core.RepositoryAggregate;
+import com.aktor.core.RepositoryCache;
+import com.aktor.core.RepositoryReadOnly;
+import com.aktor.core.RepositoryRotating;
+import com.aktor.core.model.RelationProviderResolver;
 
 import java.util.ServiceLoader;
 
@@ -23,6 +28,10 @@ public final class RepositoryProvider
                 environment.put(dependency);
             }
         }
+        environment.registerLoader(RepositoryFactory.class, new RepositoryAggregate.Loader());
+        environment.registerLoader(RepositoryFactory.class, new RepositoryCache.Loader());
+        environment.registerLoader(RepositoryFactory.class, new RepositoryReadOnly.Loader());
+        environment.registerLoader(RepositoryFactory.class, new RepositoryRotating.Loader());
         for (final RepositoryFactoryLoader loader : ServiceLoader.load(RepositoryFactoryLoader.class))
         {
             environment.registerLoader(RepositoryFactory.class, loader);
@@ -49,16 +58,16 @@ public final class RepositoryProvider
         return environment.require(Objects.requireNonNull(type));
     }
 
-    public String requireConfiguration(final String path, final String label)
+    public String requireConfiguration(final String key, final String label)
     {
-        final String value = configuration.getString(Objects.requireNonNull(path));
+        final String value = configuration.getString(Objects.requireNonNull(key));
         if (value == null)
         {
-            throw new IllegalArgumentException(label + " is required at configuration path: " + path);
+            throw new IllegalArgumentException(label + " is required at configuration key: " + key);
         }
         else if (value.isBlank())
         {
-            throw new IllegalArgumentException(label + " cannot be blank at configuration path: " + path);
+            throw new IllegalArgumentException(label + " cannot be blank at configuration key: " + key);
         }
         return value;
     }
@@ -69,11 +78,22 @@ public final class RepositoryProvider
         final Class<Key> keyType
     )
     {
+        return repository(name, itemType, keyType, new RelationProviderResolver<>());
+    }
+
+    public <Item extends Data<Key>, Key> Repository<Item, Key> repository(
+        final String name,
+        final Class<Item> itemType,
+        final Class<Key> keyType,
+        final RelationProviderResolver<Key> relationProviderResolver
+    )
+    {
         return RepositoryFactory.of(this, Objects.requireNonNull(name)).repository(
             this,
             name,
             Objects.requireNonNull(itemType),
-            Objects.requireNonNull(keyType)
+            Objects.requireNonNull(keyType),
+            Objects.requireNonNull(relationProviderResolver)
         );
     }
 }

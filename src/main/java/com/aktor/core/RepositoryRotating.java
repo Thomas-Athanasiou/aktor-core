@@ -1,5 +1,10 @@
 package com.aktor.core;
 
+import com.aktor.core.model.Configuration;
+import com.aktor.core.model.Environment;
+import com.aktor.core.model.RepositoryFactory;
+import com.aktor.core.model.RepositoryFactoryLoader;
+import com.aktor.core.model.RepositoryProvider;
 import com.aktor.core.exception.DeleteException;
 import com.aktor.core.exception.SaveException;
 import com.aktor.core.exception.SearchException;
@@ -60,6 +65,108 @@ extends RepositoryWrapper<Item, Key>
             {
                 throw new SaveException("Failed to rotate repository", exception);
             }
+        }
+    }
+
+    public static final class Factory implements RepositoryFactory
+    {
+        @Override
+        public <Item extends Data<Key>, Key> Repository<Item, Key> repository(
+            final RepositoryProvider provider,
+            final String name,
+            final Class<Item> itemType,
+            final Class<Key> keyType
+        )
+        {
+            return repository(provider, name, itemType, keyType, new com.aktor.core.model.RelationProviderResolver<>());
+        }
+
+        @Override
+        public <Item extends Data<Key>, Key> Repository<Item, Key> repository(
+            final RepositoryProvider provider,
+            final String name,
+            final Class<Item> itemType,
+            final Class<Key> keyType,
+            final com.aktor.core.model.RelationProviderResolver<Key> relationProviderResolver
+        )
+        {
+            final Configuration wrapper = wrapper(provider.configuration(), name);
+            final String source = firstNonBlank(
+                singleSource(wrapper.getConfiguration("sources")),
+                wrapper.getString("source"),
+                wrapper.getString("repository")
+            );
+            if (source == null || source.isBlank())
+            {
+                throw new IllegalArgumentException("Wrapper source is required for repository: " + name);
+            }
+            final String rotationField = firstNonBlank(wrapper.getString("rotationField"), "key");
+            final boolean rotationDirection = Boolean.parseBoolean(firstNonBlank(wrapper.getString("rotationDirection"), "true"));
+            final int maxItems = Integer.parseInt(firstNonBlank(wrapper.getString("maxItems"), "0"));
+            return new RepositoryRotating<>(
+                provider.repository(source, itemType, keyType, relationProviderResolver),
+                () -> maxItems,
+                rotationField,
+                rotationDirection
+            );
+        }
+
+        private static Configuration wrapper(final Configuration configuration, final String name)
+        {
+            final Configuration entities = configuration.getConfiguration("entity");
+            if (entities.has(name))
+            {
+                return entities.getConfiguration(name).getConfiguration("wrapper");
+            }
+            return configuration.getConfiguration(name).getConfiguration("wrapper");
+        }
+
+        private static String singleSource(final Configuration sources)
+        {
+            final String[] keys = sources.keys();
+            return keys.length == 0 ? null : keys[0];
+        }
+
+        private static String firstNonBlank(final String first, final String second)
+        {
+            if (first != null && !first.isBlank())
+            {
+                return first.trim();
+            }
+            if (second != null && !second.isBlank())
+            {
+                return second.trim();
+            }
+            return null;
+        }
+
+        private static String firstNonBlank(final String first, final String second, final String third)
+        {
+            if (first != null && !first.isBlank())
+            {
+                return first.trim();
+            }
+            if (second != null && !second.isBlank())
+            {
+                return second.trim();
+            }
+            return null;
+        }
+    }
+
+    public static final class Loader
+    implements RepositoryFactoryLoader
+    {
+        @Override
+        public String kind()
+        {
+            return "rotating";
+        }
+
+        @Override
+        public RepositoryFactory load(final Environment environment)
+        {
+            return new Factory();
         }
     }
 }

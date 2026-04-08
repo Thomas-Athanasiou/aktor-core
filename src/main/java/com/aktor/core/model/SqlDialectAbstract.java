@@ -28,7 +28,7 @@ implements SqlDialect
             {
                 continue;
             }
-            if (!output.isEmpty())
+            if (output.length() > 0)
             {
                 output.append(", ");
             }

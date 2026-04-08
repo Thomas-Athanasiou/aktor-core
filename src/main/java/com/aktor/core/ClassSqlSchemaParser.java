@@ -90,18 +90,22 @@ implements Converter<Class<? extends Data<?>>, String>
             throw new ConversionException(exception);
         }
 
+        final boolean relationType = RelationKeySpec.isRelationType(input);
+        if (relationType)
+        {
+            columns.putIfAbsent(keyField, "TEXT");
+        }
         if (columns.isEmpty())
         {
             throw new ConversionException("No fields found for table schema in " + table);
         }
 
-        final boolean relationType = RelationKeySpec.isRelationType(input);
         final String columnSql = columns.entrySet().stream()
             .map(
                 entry -> {
                     final String name = entry.getKey();
                     final String value = entry.getValue();
-                    final boolean isKey = !relationType && name.equals(keyField);
+                    final boolean isKey = name.equals(keyField);
                     return joinParts(
                         new String[]
                         {
@@ -113,16 +117,12 @@ implements Converter<Class<? extends Data<?>>, String>
                 }
             )
             .collect(Collectors.joining(","));
-        final String relationPrimaryKeySql = relationType
-            ? ", PRIMARY KEY (" + start + RelationKeySpec.MAIN + end + ", " + start + RelationKeySpec.FOREIGN + end + ")"
-            : "";
         return "CREATE TABLE IF NOT EXISTS "
             + start
             + table
             + end
             + " ("
             + columnSql
-            + relationPrimaryKeySql
             + ");";
     }
 

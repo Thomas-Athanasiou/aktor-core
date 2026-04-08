@@ -297,19 +297,24 @@ implements Model
     )
     throws ModelException
     {
-        final Collection<ForeignKey> existingKeys = new HashSet<>(existingRelations.size());
+        final Collection<String> existingKeys = new HashSet<>(existingRelations.size());
+        final Collection<String> desiredKeys = new HashSet<>(foreignKeys.size());
+        for (final ForeignKey foreignKey : foreignKeys)
+        {
+            desiredKeys.add(fingerprint(foreignKey));
+        }
         for (final Relation<MainKey, ForeignKey> existing : existingRelations)
         {
-            final ForeignKey existingKey = existing.foreignKey();
+            final String existingKey = fingerprint(existing.foreignKey());
             existingKeys.add(existingKey);
-            if (!foreignKeys.contains(existingKey))
+            if (!desiredKeys.contains(existingKey))
             {
                 deleteRelation(existing);
             }
         }
         for (final ForeignKey foreignKey : foreignKeys)
         {
-            if (!existingKeys.contains(foreignKey))
+            if (!existingKeys.contains(fingerprint(foreignKey)))
             {
                 saveRelation(mainKey, foreignKey);
             }
@@ -357,6 +362,11 @@ implements Model
             throw new IllegalArgumentException("field cannot be blank");
         }
         return value;
+    }
+
+    private static String fingerprint(final Object value)
+    {
+        return String.valueOf(value);
     }
 
     // TODO maybe check only for "key.equals()"?

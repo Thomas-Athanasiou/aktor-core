@@ -23,7 +23,7 @@ implements Repository<Item, Key>
     }
 
     @Override
-    public final void save(final Item item) throws SaveException
+    public void save(final Item item) throws SaveException
     {
         try
         {
@@ -47,7 +47,7 @@ implements Repository<Item, Key>
     }
 
     @Override
-    public final void delete(final Item item) throws DeleteException
+    public void delete(final Item item) throws DeleteException
     {
         try
         {

@@ -25,7 +25,10 @@ It defines:
 - field-to-storage mapping through `FieldResolver`
 - repository contracts through `Repository`
 - SQL-backed core repository support through `RepositorySql`
+- repository composition through `RepositoryCache`, `RepositoryAggregate`, `RepositoryReadOnly`, and `RepositoryRotating`
 - relation orchestration through `RelationBinding`, `RelationProvider`, `RelationProviderResolver`, and `RelationProcessor`
+- repository loading through `RepositoryProvider`
+- management loading through `ManagementProvider`
 - transactional management through `ManagementRepository`
 
 The main goal is simple:
@@ -77,6 +80,70 @@ This same resolver is reused across:
 - schema generation
 
 That keeps mapping logic in one place instead of scattering it across repositories and converters.
+
+### 2.1 Configuration Is Tree-Shaped
+
+`Configuration` exposes direct child lookup by key.
+
+Common accessors are:
+- `getString(key)`
+- `getLong(key)`
+- `getInteger(key)`
+- `getBoolean(key)`
+- `getConfiguration(key)`
+- `has(key)`
+- `keys()`
+
+`getConfiguration(key)` returns a nested configuration view, so callers can walk the tree explicitly instead of encoding structure into dotted paths.
+
+For example:
+
+```java
+configuration
+    .getConfiguration("entity")
+    .getConfiguration("workflow-main")
+    .getConfiguration("storage")
+    .getString("table");
+```
+
+This is the preferred shape for config-driven repositories and managements.
+
+### XML Repository Config Example
+
+The repository layer is usually described as a tree of named entities.
+
+```xml
+<configuration>
+    <entity name="exercise">
+        <aggregate kind="cache" cacheWriteSourceCount="1">
+            <sources>
+                <source name="exercise-sqlite" />
+                <source name="exercise-csv" />
+            </sources>
+        </aggregate>
+    </entity>
+
+    <entity name="exercise-sqlite">
+        <storage kind="sqlite" table="exercise" />
+    </entity>
+
+    <entity name="exercise-csv">
+        <storage kind="csv" resource="exercise_catalog" />
+    </entity>
+
+    <entity name="template">
+        <storage kind="sqlite" table="template" />
+        <management kind="repository" />
+        <relation field="exercises" target="exercise" />
+    </entity>
+</configuration>
+```
+
+In this example:
+- `exercise` is a cache aggregate over SQLite and CSV
+- `exercise-sqlite` is the writable source
+- `exercise-csv` is the read-only seed source
+- `template` is a normal storage entity with relation bindings
 
 ### 3. Relations Are Storage-Agnostic
 
@@ -139,6 +206,11 @@ That is the API layer meant to be consumed by higher-level code for:
 
 Repositories are the persistence mechanism underneath.
 `Management<>` is the service-level abstraction that coordinates persistence and relation behavior.
+
+`RepositoryProvider` is the repository-facing loader API.
+`ManagementProvider` sits above it and builds managements from repositories, including nested managements for related entities.
+
+That split keeps repository loading focused on storage selection, while management loading owns relation orchestration.
 
 ## Relation Features
 
@@ -241,6 +313,19 @@ That helps prevent:
 - inconsistent field mapping
 - custom parser sprawl in app code
 
+### Repository Composition
+
+Core now includes a few higher-level repository shapes:
+
+- `RepositoryReadOnly` for single-source read-only views
+- `RepositoryRotating` for source rotation
+- `RepositoryAggregate` for multi-source aggregation
+- `RepositoryCache` for cache-style fan-out reads with controlled write-through
+
+`RepositoryCache` supports a configurable `cacheWriteSourceCount`, so reads can span multiple sources while writes only go to the configured leading sources.
+
+This is useful when one source is writable and another is read-only, such as a SQLite source plus a CSV seed source.
+
 ## Design Principles
 
 ### Logical Model First
@@ -280,8 +365,9 @@ all follow one consistent model.
 2. Create a `FieldResolver` if storage field names need overrides.
 3. Build relation bindings for nested `Data<?>` / `Data<?>[]` fields.
 4. Build a `RelationProviderResolver`.
-5. Create a repository.
-6. Wrap it in `ManagementRepository`.
+5. Load a repository through `RepositoryProvider`.
+6. Load a management through `ManagementProvider`.
+7. Wrap it in `ManagementRepository` if you need the service-level CRUD orchestration directly.
 
 ### Example: Nested Data Entity
 
@@ -327,6 +413,13 @@ Because of that split, relations are not limited to one storage backend. A singl
 - SQLite-backed entities
 - in-memory relation links
 - or any other repository implementation that follows the core interfaces
+
+Configuration for these pieces is tree-based as well. A typical entity block can describe:
+- `storage`
+- `aggregate`
+- `wrapper`
+- `management`
+- `relation`
 
 ## Current Strengths
 

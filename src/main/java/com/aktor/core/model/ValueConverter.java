@@ -5,8 +5,10 @@ import com.aktor.core.data.Relation;
 import com.aktor.core.exception.ConversionException;
 import com.aktor.core.exception.ModelException;
 import com.aktor.core.util.SimpleDataObjectConverter;
+import com.aktor.core.util.CsvValuesUtil;
 
 import java.lang.reflect.Array;
+import java.util.Locale;
 import java.util.Objects;
 
 public final class ValueConverter<Key>
@@ -125,6 +127,17 @@ public final class ValueConverter<Key>
                 object = array;
             }
         }
+        else if (target.isArray() && Enum.class.isAssignableFrom(target.getComponentType()))
+        {
+            final Class<?> componentType = target.getComponentType();
+            final String[] values = CsvValuesUtil.split(raw);
+            final Object[] array = (Object[]) Array.newInstance(componentType, values.length);
+            for (int index = 0; index < values.length; index++)
+            {
+                array[index] = convertEnum(componentType.asSubclass(Enum.class), values[index]);
+            }
+            object = array;
+        }
         else if (raw == null || raw.isEmpty())
         {
             if (target.isPrimitive())
@@ -144,7 +157,14 @@ public final class ValueConverter<Key>
         {
             @SuppressWarnings("unchecked")
             final Class<? extends Enum<?>> enumClass = (Class<? extends Enum<?>>) target;
-            object = Enum.valueOf(enumClass.asSubclass(Enum.class), raw);
+            try
+            {
+                object = convertEnum(enumClass.asSubclass(Enum.class), raw);
+            }
+            catch (final IllegalArgumentException exception)
+            {
+                throw new ConversionException(exception);
+            }
         }
         else
         {
@@ -152,6 +172,23 @@ public final class ValueConverter<Key>
         }
 
         return object;
+    }
+
+    private static Enum<?> convertEnum(final Class<? extends Enum> enumType, final String raw)
+    {
+        final String safeRaw = raw == null ? "" : raw.trim();
+        try
+        {
+            return Enum.valueOf(enumType, safeRaw);
+        }
+        catch (final IllegalArgumentException ignored)
+        {
+            final String normalized = safeRaw
+                .replace(' ', '_')
+                .replace('-', '_')
+                .toUpperCase(java.util.Locale.US);
+            return Enum.valueOf(enumType, normalized);
+        }
     }
 
     public Key toKey(final String rawKey)

@@ -6,18 +6,14 @@ import com.aktor.core.exception.ModelException;
 import com.aktor.core.util.RecordAccessorFallbackUtil;
 import com.aktor.core.util.RecordTypeUtil;
 
-import java.io.Serializable;
-import java.lang.Record;
-import java.lang.invoke.SerializedLambda;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.lang.reflect.Method;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
 
 public final class RelationProviderResolver<Key>
 implements Model, TransactionParticipant
@@ -262,7 +258,6 @@ implements Model, TransactionParticipant
         return metadata.toArray(ACCESSOR_METADATA);
     }
 
-    //TODO: Move to some data util?
     private static boolean isRelationType(final Class<?> fieldType)
     {
         return Data.class.isAssignableFrom(fieldType) || Data[].class.isAssignableFrom(fieldType);
@@ -282,13 +277,6 @@ implements Model, TransactionParticipant
         Object read(Object value) throws ReflectiveOperationException;
     }
 
-    @FunctionalInterface
-    public interface RecordAccessor<Item extends Record, Value>
-    extends Function<Item, Value>, Serializable
-    {
-    }
-
-    // TODO TOO MANY ADD TYPES, MAYBE SIMPLIFY?
     public static final class Builder<Key>
     {
         private final Map<String, RelationProvider<Key, ?, ?>> relationProviderMap = new HashMap<>();
@@ -317,23 +305,6 @@ implements Model, TransactionParticipant
             return this;
         }
 
-        public <Item extends Record, Value> Builder<Key> add(
-            final RecordAccessor<Item, Value> componentAccessor,
-            final RelationProvider<Key, ?, ?> relationProvider
-        )
-        {
-            return add(resolveAccessorField(componentAccessor), relationProvider);
-        }
-
-        public <Item extends Record, Value> Builder<Key> add(
-            final RecordAccessor<Item, Value> componentAccessor,
-            final String mappedField,
-            final RelationProvider<Key, ?, ?> relationProvider
-        )
-        {
-            return add(resolveAccessorField(componentAccessor), mappedField, relationProvider);
-        }
-
         public <ForeignKey, ForeignData extends Data<ForeignKey>> Builder<Key> add(
             final RelationBinding<Key, ForeignKey, ForeignData> relationBinding
         )
@@ -344,52 +315,10 @@ implements Model, TransactionParticipant
 
         public <ForeignKey, ForeignData extends Data<ForeignKey>> Builder<Key> add(
             final String field,
-            final String mappedField,
             final RelationBinding<Key, ForeignKey, ForeignData> relationBinding
         )
         {
-            final String name = requireField(field);
-            final RelationBinding<Key, ForeignKey, ForeignData> binding = Objects.requireNonNull(relationBinding);
-            if (!name.equals(binding.field()))
-            {
-                throw new IllegalArgumentException(
-                    "Relation binding field mismatch: expected " + name + " but was " + binding.field()
-                );
-            }
-            return add(name, mappedField, new RelationProvider<>(binding));
-        }
-
-        public <Item extends Record, Value, ForeignKey, ForeignData extends Data<ForeignKey>> Builder<Key> add(
-            final RecordAccessor<Item, Value> componentAccessor,
-            final String mappedField,
-            final RelationBinding<Key, ForeignKey, ForeignData> relationBinding
-        )
-        {
-            return add(resolveAccessorField(componentAccessor), mappedField, relationBinding);
-        }
-
-        public <Item extends Record, Value, ForeignKey, ForeignData extends Data<ForeignKey>> Builder<Key> add(
-            final RecordAccessor<Item, Value> componentAccessor,
-            final RelationBinding<Key, ForeignKey, ForeignData> relationBinding
-        )
-        {
-            return add(resolveAccessorField(componentAccessor), relationBinding);
-        }
-
-        public <ForeignKey, ForeignData extends Data<ForeignKey>> Builder<Key> add(
-            final String field,
-            final RelationBinding<Key, ForeignKey, ForeignData> relationBinding
-        )
-        {
-            final String name = requireField(field);
-            final RelationBinding<Key, ForeignKey, ForeignData> binding = Objects.requireNonNull(relationBinding);
-            if (!name.equals(binding.field()))
-            {
-                throw new IllegalArgumentException(
-                    "Relation binding field mismatch: expected " + name + " but was " + binding.field()
-                );
-            }
-            return add(binding);
+            return add(requireField(field), new RelationProvider<>(Objects.requireNonNull(relationBinding)));
         }
 
         public RelationProviderResolver<Key> build()
@@ -415,44 +344,5 @@ implements Model, TransactionParticipant
             return value;
         }
 
-        private static String resolveAccessorField(final RecordAccessor<?, ?> componentAccessor)
-        {
-            final String methodName = extractAccessorMethodName(componentAccessor);
-            if (methodName.startsWith("lambda$"))
-            {
-                throw new IllegalArgumentException("Use a record component method reference, for example: MyRecord::component");
-            }
-            return requireField(FieldNormalizer.DEFAULT.resolve(methodName));
-        }
-
-        private static String extractAccessorMethodName(final RecordAccessor<?, ?> componentAccessor)
-        {
-            try
-            {
-                final String methodName;
-                final Method writeReplace = Objects.requireNonNull(componentAccessor).getClass().getDeclaredMethod(
-                    "writeReplace"
-                );
-                writeReplace.setAccessible(true);
-                final Object replacement = writeReplace.invoke(componentAccessor);
-                if (replacement instanceof final SerializedLambda serialized)
-                {
-                    methodName = serialized.getImplMethodName();
-                    if (methodName == null || methodName.isBlank())
-                    {
-                        throw new IllegalArgumentException("Cannot resolve accessor method name");
-                    }
-                }
-                else
-                {
-                    throw new IllegalArgumentException("Unsupported accessor lambda implementation");
-                }
-                return methodName;
-            }
-            catch (final ReflectiveOperationException exception)
-            {
-                throw new IllegalArgumentException("Cannot resolve field from record component accessor", exception);
-            }
-        }
     }
 }

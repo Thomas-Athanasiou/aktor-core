@@ -1,21 +1,18 @@
 package com.aktor.core.model;
 
-// TODO REFRACTOR/POLISH/NESTED STRUCTURES
 public interface Configuration
 {
-    String getString(String path);
+    String getString(String key);
 
-    String[] getStrings(String path);
+    boolean has(String key);
 
-    Long getLong(String path);
+    String[] keys();
 
-    Long[] getLongs(String path);
+    Long getLong(String key);
 
-    Integer getInteger(String path);
+    Integer getInteger(String key);
 
-    Integer[] getIntegers(String path);
+    Boolean getBoolean(String key);
 
-    Boolean getBoolean(String path);
-
-    Boolean[] getBooleans(String path);
+    Configuration getConfiguration(String key);
 }

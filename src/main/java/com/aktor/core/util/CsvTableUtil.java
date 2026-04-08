@@ -21,7 +21,7 @@ public final class CsvTableUtil
             return new CsvTable(List.of(), List.of());
         }
 
-        final List<String> headers = List.copyOf(rows.get(0));
+        final List<String> headers = sanitizeHeaders(rows.get(0));
         final List<Map<String, String>> items = new ArrayList<>(Math.max(0, rows.size() - 1));
         for (int rowIndex = 1; rowIndex < rows.size(); rowIndex++)
         {
@@ -39,6 +39,24 @@ public final class CsvTableUtil
             items.add(values);
         }
         return new CsvTable(headers, items);
+    }
+
+    private static List<String> sanitizeHeaders(final List<String> headers)
+    {
+        final List<String> sanitized = new ArrayList<>(Objects.requireNonNull(headers).size());
+        for (int index = 0; index < headers.size(); index++)
+        {
+            final String header = headers.get(index);
+            if (index == 0 && header != null && !header.isEmpty() && header.charAt(0) == '\uFEFF')
+            {
+                sanitized.add(header.substring(1));
+            }
+            else
+            {
+                sanitized.add(header);
+            }
+        }
+        return List.copyOf(sanitized);
     }
 
     public static String serialize(final CsvTable csvTable)
