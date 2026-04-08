@@ -9,7 +9,6 @@ import com.aktor.core.SearchResult;
 import com.aktor.core.SortOrder;
 import com.aktor.core.exception.ConversionException;
 import com.aktor.core.exception.SearchException;
-import com.aktor.core.util.DataRowUtil;
 import com.aktor.core.util.SimpleDataObjectConverter;
 import com.aktor.core.value.Filter;
 
@@ -154,7 +153,7 @@ public final class CollectionProcessor<Item extends Data<Key>, Key>
     private IndexedItem<Item> indexItem(final Item item, final PreparedSearch preparedSearch) throws ConversionException
     {
         final Row row = mapper.convert(item);
-        final Map<String, String> fields = DataRowUtil.toFieldMap(row);
+        final Map<String, String> fields = Row.toFieldMap(row);
         final PreparedSortOrder[] sortOrders = preparedSearch.sortOrders();
         final String[] sortValues;
         if (sortOrders.length < 1)

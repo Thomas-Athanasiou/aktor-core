@@ -7,7 +7,6 @@ import com.aktor.core.FilterGroup;
 import com.aktor.core.Model;
 import com.aktor.core.Row;
 import com.aktor.core.SearchCriteria;
-import com.aktor.core.util.DataRowUtil;
 
 import java.util.Map;
 import java.util.Objects;
@@ -32,7 +31,7 @@ implements Model
 
     public boolean isEntityMatch(final Row row, final SearchCriteria searchCriteria)
     {
-        return isEntityMatch(DataRowUtil.toFieldMap(row), searchCriteria);
+        return isEntityMatch(Row.toFieldMap(row), searchCriteria);
     }
 
     public boolean isEntityMatch(final Map<String, String> fieldMap, final SearchCriteria searchCriteria)

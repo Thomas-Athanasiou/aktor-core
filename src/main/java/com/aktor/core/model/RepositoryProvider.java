@@ -3,20 +3,30 @@ package com.aktor.core.model;
 import com.aktor.core.Data;
 import com.aktor.core.Repository;
 
+import java.util.ServiceLoader;
+
 import java.util.Objects;
 
 public final class RepositoryProvider
 {
-    private static final Object[] OBJECTS = new Object[0];
-
     private final Configuration configuration;
-
-    private final Object[] dependencies;
+    private final Environment environment;
 
     public RepositoryProvider(final Configuration configuration, final Object... dependencies)
     {
         this.configuration = Objects.requireNonNull(configuration);
-        this.dependencies = dependencies == null ? OBJECTS : dependencies.clone();
+        this.environment = new EnvironmentDefault();
+        if (dependencies != null)
+        {
+            for (final Object dependency : dependencies)
+            {
+                environment.put(dependency);
+            }
+        }
+        for (final RepositoryFactoryLoader loader : ServiceLoader.load(RepositoryFactoryLoader.class))
+        {
+            environment.registerLoader(RepositoryFactory.class, loader);
+        }
     }
 
     public static RepositoryProvider of(final Configuration configuration, final Object... dependencies)
@@ -29,17 +39,14 @@ public final class RepositoryProvider
         return configuration;
     }
 
+    public Environment environment()
+    {
+        return environment;
+    }
+
     public <Dependency> Dependency require(final Class<Dependency> type)
     {
-        final Class<Dependency> safeType = Objects.requireNonNull(type);
-        for (final Object dependency : dependencies)
-        {
-            if (safeType.isInstance(dependency))
-            {
-                return safeType.cast(dependency);
-            }
-        }
-        throw new IllegalArgumentException("No dependency available for type: " + safeType.getName());
+        return environment.require(Objects.requireNonNull(type));
     }
 
     public String requireConfiguration(final String path, final String label)

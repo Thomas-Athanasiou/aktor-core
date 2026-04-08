@@ -1,6 +1,6 @@
 package com.aktor.core.model;
 
-import com.aktor.core.util.DataRowUtil;
+import com.aktor.core.Row;
 import com.aktor.core.value.Filter;
 
 import java.util.Map;
@@ -11,7 +11,7 @@ implements FilterCondition
     @Override
     public boolean isEntityMatch(final Map<String, String> fieldMap, final Filter filter)
     {
-        final String entityValue = DataRowUtil.get(fieldMap, filter.field());
+        final String entityValue = Row.get(fieldMap, filter.field());
         return entityValue != null && !entityValue.isEmpty();
     }
 }

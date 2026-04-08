@@ -21,4 +21,14 @@ public record FilterGroup(Filter[] filters)
     {
         return Arrays.copyOf(filters, filters.length);
     }
+
+    public static FilterGroup addFilter(final FilterGroup filterGroup, final Filter filter)
+    {
+        final FilterGroup safeFilterGroup = Objects.requireNonNull(filterGroup);
+        final Filter safeFilter = Objects.requireNonNull(filter);
+        final Filter[] filters = safeFilterGroup.filters();
+        final Filter[] next = Arrays.copyOf(filters, filters.length + 1);
+        next[filters.length] = safeFilter;
+        return new FilterGroup(next);
+    }
 }

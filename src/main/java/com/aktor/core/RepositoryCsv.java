@@ -8,7 +8,6 @@ import com.aktor.core.exception.SearchException;
 import com.aktor.core.model.CollectionProcessor;
 import com.aktor.core.model.SearchCriteriaCondition;
 import com.aktor.core.util.CsvTableUtil;
-import com.aktor.core.util.DataRowUtil;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -71,7 +70,7 @@ implements Repository<Item, Key>
             final String keyValue = String.valueOf(key);
             for (final Map<String, String> row : loadTable().rows())
             {
-                if (Objects.equals(DataRowUtil.get(row, keyField), keyValue))
+                if (Objects.equals(Row.get(row, keyField), keyValue))
                 {
                     return deserializer.convert(row);
                 }
@@ -233,7 +232,7 @@ implements Repository<Item, Key>
     {
         for (int index = 0; index < rows.size(); index++)
         {
-            if (Objects.equals(DataRowUtil.get(rows.get(index), keyField), keyValue))
+            if (Objects.equals(Row.get(rows.get(index), keyField), keyValue))
             {
                 return index;
             }
@@ -259,7 +258,7 @@ implements Repository<Item, Key>
         final Map<String, String> result = new LinkedHashMap<>(headers.size());
         for (final String header : headers)
         {
-            result.put(header, DataRowUtil.get(row, header));
+            result.put(header, Row.get(row, header));
         }
         return result;
     }
