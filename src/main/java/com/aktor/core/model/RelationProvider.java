@@ -17,16 +17,20 @@ import com.aktor.core.exception.SearchException;
 import com.aktor.core.service.Management;
 import com.aktor.core.value.Filter;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
-import java.util.function.BiFunction;
 
 public final class RelationProvider<MainKey, ForeignKey, ForeignData extends Data<ForeignKey>>
 implements Model
 {
+    private static final String MAIN_FIELD = "main_key";
+
+    private static final String FOREIGN_FIELD = "foreign_key";
+
     private static final SortOrder[] SORT_ORDERS = new SortOrder[0];
 
     private static final Data<?>[] DATA = new Data<?>[0];
@@ -37,9 +41,11 @@ implements Model
 
     private final Repository<Relation<MainKey, ForeignKey>, String> relationRepository;
 
-    private final BiFunction<MainKey, ForeignKey, Relation<MainKey, ForeignKey>> relationFactory;
+    private final RelationFactory<MainKey, ForeignKey> relationFactory;
     private final String mainField;
     private final String foreignField;
+    private final RelationCardinalityPolicy cardinalityPolicy;
+    private final RelationStoragePolicy storagePolicy;
     private final RelationSavePolicy savePolicy;
     private final RelationDeletePolicy deletePolicy;
     private final List<TransactionParticipant> transactionParticipants;
@@ -47,26 +53,26 @@ implements Model
     public RelationProvider(final RelationBinding<MainKey, ForeignKey, ForeignData> binding)
     {
         this(
+            relationFieldResolver(binding.mainField(), binding.foreignField()),
             binding.foreignType(),
             binding.foreignManagement(),
             binding.relationRepository(),
             binding.relationFactory(),
-            binding.mainField(),
-            binding.foreignField(),
+            binding.cardinalityPolicy(),
+            binding.storagePolicy(),
             binding.savePolicy(),
             binding.deletePolicy()
         );
     }
 
-    // TODO REPLACE BiFucntion with custom interface?
-    // TODO Replace mainField/foreignField with FieldNormalizer?
     public RelationProvider(
+        final FieldNormalizer fieldResolver,
         final Class<ForeignData> foreignType,
         final Management<ForeignData, ForeignKey> foreignManagement,
         final Repository<Relation<MainKey, ForeignKey>, String> relationRepository,
-        final BiFunction<MainKey, ForeignKey, Relation<MainKey, ForeignKey>> relationFactory,
-        final String mainField,
-        final String foreignField,
+        final RelationFactory<MainKey, ForeignKey> relationFactory,
+        final RelationCardinalityPolicy cardinalityPolicy,
+        final RelationStoragePolicy storagePolicy,
         final RelationSavePolicy savePolicy,
         final RelationDeletePolicy deletePolicy
     )
@@ -76,8 +82,13 @@ implements Model
         this.foreignManagement = Objects.requireNonNull(foreignManagement);
         this.relationRepository = Objects.requireNonNull(relationRepository);
         this.relationFactory = Objects.requireNonNull(relationFactory);
-        this.mainField = requireField(mainField);
-        this.foreignField = requireField(foreignField);
+
+        Objects.requireNonNull(fieldResolver);
+        this.mainField = requireField(fieldResolver.resolve(MAIN_FIELD));
+        this.foreignField = requireField(fieldResolver.resolve(FOREIGN_FIELD));
+
+        this.cardinalityPolicy = Objects.requireNonNull(cardinalityPolicy);
+        this.storagePolicy = Objects.requireNonNull(storagePolicy);
         this.savePolicy = Objects.requireNonNull(savePolicy);
         this.deletePolicy = Objects.requireNonNull(deletePolicy);
         this.transactionParticipants = List.copyOf(
@@ -85,23 +96,32 @@ implements Model
         );
     }
 
+    public RelationProvider(
+        final Class<ForeignData> foreignType,
+        final Management<ForeignData, ForeignKey> foreignManagement,
+        final Repository<Relation<MainKey, ForeignKey>, String> relationRepository,
+        final RelationFactory<MainKey, ForeignKey> relationFactory,
+        final RelationSavePolicy savePolicy,
+        final RelationDeletePolicy deletePolicy
+    )
+    {
+        this(
+            relationFieldResolver(MAIN_FIELD, FOREIGN_FIELD),
+            foreignType,
+            foreignManagement,
+            relationRepository,
+            relationFactory,
+            RelationCardinalityPolicy.ONE_TO_ONE,
+            RelationStoragePolicy.SEPARATE,
+            savePolicy,
+            deletePolicy
+        );
+    }
+
     public Data<?> single(final MainKey key) throws ModelException
     {
-        final Data<?> item;
         final Data<?>[] items = many(key);
-        if (items.length < 1)
-        {
-            item = null;
-        }
-        else if (items.length > 1)
-        {
-            throw new ModelException("One to one relation mismatch");
-        }
-        else
-        {
-            item = items[0];
-        }
-        return item;
+        return items.length > 0 ? items[0] : null;
     }
 
     public Data<?>[] many(final MainKey key) throws ModelException
@@ -112,6 +132,10 @@ implements Model
             if (list.isEmpty())
             {
                 return DATA;
+            }
+            if (cardinalityPolicy == RelationCardinalityPolicy.ONE_TO_ONE && list.size() > 1)
+            {
+                throw new ModelException("One to one relation mismatch");
             }
             final List<Data<?>> items = new ArrayList<>(list.size());
             for (final Relation<MainKey, ForeignKey> relation : list)
@@ -164,6 +188,11 @@ implements Model
                 else if (value != null)
                 {
                     throw new ModelException("Unsupported relation type for relation key: " + mainKey);
+                }
+
+                if (cardinalityPolicy == RelationCardinalityPolicy.ONE_TO_ONE && foreignKeys.size() > 1)
+                {
+                    throw new ModelException("One to one relation mismatch");
                 }
 
                 if (!usesInlineSingularRelationStorage())
@@ -270,7 +299,7 @@ implements Model
     {
         try
         {
-            relationRepository.save(relationFactory.apply(mainKey, foreignKey));
+            relationRepository.save(relationFactory.create(mainKey, foreignKey));
         }
         catch (final SaveException exception)
         {
@@ -369,10 +398,18 @@ implements Model
         return String.valueOf(value);
     }
 
-    // TODO maybe check only for "key.equals()"?
+    @SuppressWarnings("unchecked")
+    private static FieldResolver relationFieldResolver(final String mainField, final String foreignField)
+    {
+        return FieldResolver.mapped(
+            (Class<? extends Data<?>>) (Class<?>) Relation.class,
+            Map.of(MAIN_FIELD, requireField(mainField), FOREIGN_FIELD, requireField(foreignField))
+        );
+    }
+
     boolean usesInlineSingularRelationStorage()
     {
-        return "key".equals(mainField)  && !"foreign_key".equals(foreignField);
+        return storagePolicy == RelationStoragePolicy.INLINE;
     }
 
     @FunctionalInterface

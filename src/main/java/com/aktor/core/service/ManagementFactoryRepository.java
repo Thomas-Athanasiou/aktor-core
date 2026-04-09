@@ -9,10 +9,12 @@ import com.aktor.core.model.ManagementFactory;
 import com.aktor.core.model.ManagementFactoryLoader;
 import com.aktor.core.model.ManagementProvider;
 import com.aktor.core.model.RelationBinding;
+import com.aktor.core.model.RelationCardinalityPolicy;
 import com.aktor.core.model.RelationDeletePolicy;
 import com.aktor.core.model.RelationProcessor;
 import com.aktor.core.model.RelationProviderResolver;
 import com.aktor.core.model.RelationSavePolicy;
+import com.aktor.core.model.RelationStoragePolicy;
 
 import java.util.Objects;
 
@@ -60,6 +62,14 @@ implements ManagementFactory
         final String relationRepositoryName = relationRepositoryName(entityName, field, relation);
         final String mainField = firstNonBlank(relation.getString("mainField"), "main_key");
         final String foreignField = firstNonBlank(relation.getString("foreignField"), "foreign_key");
+        final RelationCardinalityPolicy cardinalityPolicy = enumValue(
+            firstNonBlank(relation.getString("cardinalityPolicy"), relation.getString("integrityPolicy")),
+            RelationCardinalityPolicy.ONE_TO_ONE
+        );
+        final RelationStoragePolicy storagePolicy = enumValue(
+            relation.getString("storagePolicy"),
+            RelationStoragePolicy.SEPARATE
+        );
         final RelationSavePolicy savePolicy = enumValue(relation.getString("savePolicy"), RelationSavePolicy.CASCADE);
         final RelationDeletePolicy deletePolicy = enumValue(relation.getString("deletePolicy"), RelationDeletePolicy.CASCADE);
 
@@ -82,6 +92,8 @@ implements ManagementFactory
             Relation::new,
             mainField,
             foreignField,
+            cardinalityPolicy,
+            storagePolicy,
             savePolicy,
             deletePolicy
         );

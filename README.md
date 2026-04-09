@@ -1,5 +1,7 @@
 # Aktor Core
 
+Aktor is a small, modular application framework and data layer built around reusable repositories, relations, search, transactions, and model mapping
+
 `core` is the storage-agnostic heart of the Aktor data model.
 
 ## Status
@@ -239,6 +241,30 @@ It:
 - runs relation delete checks
 - runs relation cleanup after delete
 - participates in transactions
+
+### RelationCardinalityPolicy
+
+The core relation layer supports:
+- `ONE_TO_ONE`
+- `ONE_TO_MANY`
+
+Current semantics:
+- `ONE_TO_ONE`: at most one related row is allowed for a parent key
+- `ONE_TO_MANY`: multiple related rows are allowed for a parent key
+
+Default policy is `ONE_TO_ONE`.
+
+### RelationStoragePolicy
+
+The core relation layer supports:
+- `INLINE`
+- `SEPARATE`
+
+Current semantics:
+- `INLINE`: relation values are read and written through inline storage semantics
+- `SEPARATE`: relation values are stored in the relation repository
+
+Default policy is `SEPARATE`.
 
 ### RelationDeletePolicy
 

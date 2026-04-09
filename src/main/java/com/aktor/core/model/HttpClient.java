@@ -59,6 +59,11 @@ implements Model
         return responseHeaders.get(name);
     }
 
+    public final Map<String, String> getResponseHeaders()
+    {
+        return new HashMap<>(responseHeaders);
+    }
+
     protected int responseStatus;
 
     public final int getResponseStatus()

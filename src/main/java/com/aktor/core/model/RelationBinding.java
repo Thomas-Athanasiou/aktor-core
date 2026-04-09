@@ -8,17 +8,17 @@ import com.aktor.core.service.Management;
 import com.aktor.core.service.ManagementRepository;
 
 import java.util.Objects;
-import java.util.function.BiFunction;
 
-// TODO TOO MANY CTOR ARGS
 public record RelationBinding<MainKey, ForeignKey, ForeignData extends Data<ForeignKey>>(
     String field,
     Class<ForeignData> foreignType,
     Management<ForeignData, ForeignKey> foreignManagement,
     Repository<Relation<MainKey, ForeignKey>, String> relationRepository,
-    BiFunction<MainKey, ForeignKey, Relation<MainKey, ForeignKey>> relationFactory,
+    RelationFactory<MainKey, ForeignKey> relationFactory,
     String mainField,
     String foreignField,
+    RelationCardinalityPolicy cardinalityPolicy,
+    RelationStoragePolicy storagePolicy,
     RelationSavePolicy savePolicy,
     RelationDeletePolicy deletePolicy
 )
@@ -26,6 +26,8 @@ implements Model
 {
     private static final String DEFAULT_MAIN_FIELD = "main_key";
     private static final String DEFAULT_FOREIGN_FIELD = "foreign_key";
+    private static final RelationCardinalityPolicy DEFAULT_CARDINALITY_POLICY = RelationCardinalityPolicy.ONE_TO_ONE;
+    private static final RelationStoragePolicy DEFAULT_STORAGE_POLICY = RelationStoragePolicy.SEPARATE;
     private static final RelationSavePolicy DEFAULT_SAVE_POLICY = RelationSavePolicy.CASCADE;
     private static final RelationDeletePolicy DEFAULT_DELETE_POLICY = RelationDeletePolicy.CASCADE;
 
@@ -34,7 +36,7 @@ implements Model
         final Class<ForeignData> foreignType,
         final Repository<ForeignData, ForeignKey> foreignRepository,
         final Repository<Relation<MainKey, ForeignKey>, String> relationRepository,
-        final BiFunction<MainKey, ForeignKey, Relation<MainKey, ForeignKey>> relationFactory
+        final RelationFactory<MainKey, ForeignKey> relationFactory
     )
     {
         this(
@@ -45,6 +47,8 @@ implements Model
             relationFactory,
             DEFAULT_MAIN_FIELD,
             DEFAULT_FOREIGN_FIELD,
+            DEFAULT_CARDINALITY_POLICY,
+            DEFAULT_STORAGE_POLICY,
             DEFAULT_SAVE_POLICY,
             DEFAULT_DELETE_POLICY
         );
@@ -55,7 +59,7 @@ implements Model
         final Class<ForeignData> foreignType,
         final Repository<ForeignData, ForeignKey> foreignRepository,
         final Repository<Relation<MainKey, ForeignKey>, String> relationRepository,
-        final BiFunction<MainKey, ForeignKey, Relation<MainKey, ForeignKey>> relationFactory,
+        final RelationFactory<MainKey, ForeignKey> relationFactory,
         final String mainField,
         final String foreignField
     )
@@ -68,6 +72,8 @@ implements Model
             relationFactory,
             mainField,
             foreignField,
+            DEFAULT_CARDINALITY_POLICY,
+            DEFAULT_STORAGE_POLICY,
             DEFAULT_SAVE_POLICY,
             DEFAULT_DELETE_POLICY
         );
@@ -78,7 +84,7 @@ implements Model
         final Class<ForeignData> foreignType,
         final Repository<ForeignData, ForeignKey> foreignRepository,
         final Repository<Relation<MainKey, ForeignKey>, String> relationRepository,
-        final BiFunction<MainKey, ForeignKey, Relation<MainKey, ForeignKey>> relationFactory,
+        final RelationFactory<MainKey, ForeignKey> relationFactory,
         final String mainField,
         final String foreignField,
         final RelationDeletePolicy deletePolicy
@@ -92,6 +98,8 @@ implements Model
             relationFactory,
             mainField,
             foreignField,
+            DEFAULT_CARDINALITY_POLICY,
+            DEFAULT_STORAGE_POLICY,
             DEFAULT_SAVE_POLICY,
             deletePolicy
         );
@@ -102,7 +110,7 @@ implements Model
         final Class<ForeignData> foreignType,
         final Management<ForeignData, ForeignKey> foreignManagement,
         final Repository<Relation<MainKey, ForeignKey>, String> relationRepository,
-        final BiFunction<MainKey, ForeignKey, Relation<MainKey, ForeignKey>> relationFactory
+        final RelationFactory<MainKey, ForeignKey> relationFactory
     )
     {
         this(
@@ -113,6 +121,8 @@ implements Model
             relationFactory,
             DEFAULT_MAIN_FIELD,
             DEFAULT_FOREIGN_FIELD,
+            DEFAULT_CARDINALITY_POLICY,
+            DEFAULT_STORAGE_POLICY,
             DEFAULT_SAVE_POLICY,
             DEFAULT_DELETE_POLICY
         );
@@ -123,7 +133,7 @@ implements Model
         final Class<ForeignData> foreignType,
         final Management<ForeignData, ForeignKey> foreignManagement,
         final Repository<Relation<MainKey, ForeignKey>, String> relationRepository,
-        final BiFunction<MainKey, ForeignKey, Relation<MainKey, ForeignKey>> relationFactory,
+        final RelationFactory<MainKey, ForeignKey> relationFactory,
         final String mainField,
         final String foreignField
     )
@@ -136,6 +146,8 @@ implements Model
             relationFactory,
             mainField,
             foreignField,
+            DEFAULT_CARDINALITY_POLICY,
+            DEFAULT_STORAGE_POLICY,
             DEFAULT_SAVE_POLICY,
             DEFAULT_DELETE_POLICY
         );
@@ -146,7 +158,7 @@ implements Model
         final Class<ForeignData> foreignType,
         final Management<ForeignData, ForeignKey> foreignManagement,
         final Repository<Relation<MainKey, ForeignKey>, String> relationRepository,
-        final BiFunction<MainKey, ForeignKey, Relation<MainKey, ForeignKey>> relationFactory,
+        final RelationFactory<MainKey, ForeignKey> relationFactory,
         final RelationSavePolicy savePolicy,
         final RelationDeletePolicy deletePolicy
     )
@@ -159,6 +171,8 @@ implements Model
             relationFactory,
             DEFAULT_MAIN_FIELD,
             DEFAULT_FOREIGN_FIELD,
+            DEFAULT_CARDINALITY_POLICY,
+            DEFAULT_STORAGE_POLICY,
             savePolicy,
             deletePolicy
         );
@@ -169,32 +183,11 @@ implements Model
         final Class<ForeignData> foreignType,
         final Management<ForeignData, ForeignKey> foreignManagement,
         final Repository<Relation<MainKey, ForeignKey>, String> relationRepository,
-        final BiFunction<MainKey, ForeignKey, Relation<MainKey, ForeignKey>> relationFactory,
-        final RelationDeletePolicy deletePolicy
-    )
-    {
-        this(
-            field,
-            foreignType,
-            foreignManagement,
-            relationRepository,
-            relationFactory,
-            DEFAULT_MAIN_FIELD,
-            DEFAULT_FOREIGN_FIELD,
-            DEFAULT_SAVE_POLICY,
-            deletePolicy
-        );
-    }
-
-    public RelationBinding(
-        final String field,
-        final Class<ForeignData> foreignType,
-        final Management<ForeignData, ForeignKey> foreignManagement,
-        final Repository<Relation<MainKey, ForeignKey>, String> relationRepository,
-        final BiFunction<MainKey, ForeignKey, Relation<MainKey, ForeignKey>> relationFactory,
+        final RelationFactory<MainKey, ForeignKey> relationFactory,
         final String mainField,
         final String foreignField,
-        final RelationSavePolicy savePolicy
+        final RelationSavePolicy savePolicy,
+        final RelationDeletePolicy deletePolicy
     )
     {
         this(
@@ -205,8 +198,10 @@ implements Model
             relationFactory,
             mainField,
             foreignField,
+            DEFAULT_CARDINALITY_POLICY,
+            DEFAULT_STORAGE_POLICY,
             savePolicy,
-            DEFAULT_DELETE_POLICY
+            deletePolicy
         );
     }
 
@@ -219,6 +214,8 @@ implements Model
         relationFactory = Objects.requireNonNull(relationFactory);
         mainField = requireField(Objects.requireNonNull(mainField));
         foreignField = requireField(Objects.requireNonNull(foreignField));
+        cardinalityPolicy = Objects.requireNonNull(cardinalityPolicy);
+        storagePolicy = Objects.requireNonNull(storagePolicy);
         savePolicy = Objects.requireNonNull(savePolicy);
         deletePolicy = Objects.requireNonNull(deletePolicy);
     }
