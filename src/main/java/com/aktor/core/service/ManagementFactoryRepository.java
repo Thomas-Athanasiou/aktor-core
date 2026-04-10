@@ -9,6 +9,7 @@ import com.aktor.core.model.ManagementFactory;
 import com.aktor.core.model.ManagementFactoryLoader;
 import com.aktor.core.model.ManagementProvider;
 import com.aktor.core.model.RelationBinding;
+import com.aktor.core.model.RelationCyclePolicy;
 import com.aktor.core.model.RelationCardinalityPolicy;
 import com.aktor.core.model.RelationDeletePolicy;
 import com.aktor.core.model.RelationProcessor;
@@ -70,6 +71,10 @@ implements ManagementFactory
             relation.getString("storagePolicy"),
             RelationStoragePolicy.SEPARATE
         );
+        final RelationCyclePolicy cyclePolicy = enumValue(
+            relation.getString("cyclePolicy"),
+            RelationCyclePolicy.REJECT
+        );
         final RelationSavePolicy savePolicy = enumValue(relation.getString("savePolicy"), RelationSavePolicy.CASCADE);
         final RelationDeletePolicy deletePolicy = enumValue(relation.getString("deletePolicy"), RelationDeletePolicy.CASCADE);
 
@@ -94,6 +99,7 @@ implements ManagementFactory
             foreignField,
             cardinalityPolicy,
             storagePolicy,
+            cyclePolicy,
             savePolicy,
             deletePolicy
         );

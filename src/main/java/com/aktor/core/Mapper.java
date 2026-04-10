@@ -5,6 +5,7 @@ import com.aktor.core.exception.ModelException;
 import com.aktor.core.model.FieldResolver;
 import com.aktor.core.model.RecordTypePlan;
 import com.aktor.core.model.RelationProviderResolver;
+import com.aktor.core.model.RelationTraversalContext;
 import com.aktor.core.model.RowMappingContext;
 import com.aktor.core.model.ValueConverter;
 import com.aktor.core.util.RecordTypeUtil;
@@ -102,6 +103,7 @@ implements Converter<Map<String, String>, Item>
                 itemType,
                 resolver.resolve(LOGICAL_KEY_FIELD_NAME)
             );
+            final RelationTraversalContext traversalContext = new RelationTraversalContext();
             final int size = componentNames.length;
             final Object[] arguments = new Object[size];
             final String rawKey = resolver.resolveRawKey(
@@ -123,6 +125,7 @@ implements Converter<Map<String, String>, Item>
                 );
                 arguments[index] = converter.convertComponent(
                     context,
+                    traversalContext,
                     componentName,
                     componentSnakeName,
                     componentTypes[index],

@@ -19,6 +19,7 @@ public record RelationBinding<MainKey, ForeignKey, ForeignData extends Data<Fore
     String foreignField,
     RelationCardinalityPolicy cardinalityPolicy,
     RelationStoragePolicy storagePolicy,
+    RelationCyclePolicy cyclePolicy,
     RelationSavePolicy savePolicy,
     RelationDeletePolicy deletePolicy
 )
@@ -28,6 +29,7 @@ implements Model
     private static final String DEFAULT_FOREIGN_FIELD = "foreign_key";
     private static final RelationCardinalityPolicy DEFAULT_CARDINALITY_POLICY = RelationCardinalityPolicy.ONE_TO_ONE;
     private static final RelationStoragePolicy DEFAULT_STORAGE_POLICY = RelationStoragePolicy.SEPARATE;
+    private static final RelationCyclePolicy DEFAULT_CYCLE_POLICY = RelationCyclePolicy.REJECT;
     private static final RelationSavePolicy DEFAULT_SAVE_POLICY = RelationSavePolicy.CASCADE;
     private static final RelationDeletePolicy DEFAULT_DELETE_POLICY = RelationDeletePolicy.CASCADE;
 
@@ -49,6 +51,7 @@ implements Model
             DEFAULT_FOREIGN_FIELD,
             DEFAULT_CARDINALITY_POLICY,
             DEFAULT_STORAGE_POLICY,
+            DEFAULT_CYCLE_POLICY,
             DEFAULT_SAVE_POLICY,
             DEFAULT_DELETE_POLICY
         );
@@ -74,6 +77,7 @@ implements Model
             foreignField,
             DEFAULT_CARDINALITY_POLICY,
             DEFAULT_STORAGE_POLICY,
+            DEFAULT_CYCLE_POLICY,
             DEFAULT_SAVE_POLICY,
             DEFAULT_DELETE_POLICY
         );
@@ -100,6 +104,7 @@ implements Model
             foreignField,
             DEFAULT_CARDINALITY_POLICY,
             DEFAULT_STORAGE_POLICY,
+            DEFAULT_CYCLE_POLICY,
             DEFAULT_SAVE_POLICY,
             deletePolicy
         );
@@ -123,6 +128,7 @@ implements Model
             DEFAULT_FOREIGN_FIELD,
             DEFAULT_CARDINALITY_POLICY,
             DEFAULT_STORAGE_POLICY,
+            DEFAULT_CYCLE_POLICY,
             DEFAULT_SAVE_POLICY,
             DEFAULT_DELETE_POLICY
         );
@@ -148,6 +154,7 @@ implements Model
             foreignField,
             DEFAULT_CARDINALITY_POLICY,
             DEFAULT_STORAGE_POLICY,
+            DEFAULT_CYCLE_POLICY,
             DEFAULT_SAVE_POLICY,
             DEFAULT_DELETE_POLICY
         );
@@ -173,6 +180,7 @@ implements Model
             DEFAULT_FOREIGN_FIELD,
             DEFAULT_CARDINALITY_POLICY,
             DEFAULT_STORAGE_POLICY,
+            DEFAULT_CYCLE_POLICY,
             savePolicy,
             deletePolicy
         );
@@ -200,6 +208,36 @@ implements Model
             foreignField,
             DEFAULT_CARDINALITY_POLICY,
             DEFAULT_STORAGE_POLICY,
+            DEFAULT_CYCLE_POLICY,
+            savePolicy,
+            deletePolicy
+        );
+    }
+
+    public RelationBinding(
+        final String field,
+        final Class<ForeignData> foreignType,
+        final Management<ForeignData, ForeignKey> foreignManagement,
+        final Repository<Relation<MainKey, ForeignKey>, String> relationRepository,
+        final RelationFactory<MainKey, ForeignKey> relationFactory,
+        final String mainField,
+        final String foreignField,
+        final RelationCyclePolicy cyclePolicy,
+        final RelationSavePolicy savePolicy,
+        final RelationDeletePolicy deletePolicy
+    )
+    {
+        this(
+            field,
+            foreignType,
+            foreignManagement,
+            relationRepository,
+            relationFactory,
+            mainField,
+            foreignField,
+            DEFAULT_CARDINALITY_POLICY,
+            DEFAULT_STORAGE_POLICY,
+            cyclePolicy,
             savePolicy,
             deletePolicy
         );
@@ -216,6 +254,7 @@ implements Model
         foreignField = requireField(Objects.requireNonNull(foreignField));
         cardinalityPolicy = Objects.requireNonNull(cardinalityPolicy);
         storagePolicy = Objects.requireNonNull(storagePolicy);
+        cyclePolicy = Objects.requireNonNull(cyclePolicy);
         savePolicy = Objects.requireNonNull(savePolicy);
         deletePolicy = Objects.requireNonNull(deletePolicy);
     }

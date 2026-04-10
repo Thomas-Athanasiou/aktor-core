@@ -58,6 +58,7 @@ implements Model, TransactionParticipant
 
     void save(final Data<Key> item) throws ModelException
     {
+        final RelationTraversalContext traversalContext = new RelationTraversalContext();
         if (!map.isEmpty())
         {
             final Class<?> itemType = item.getClass();
@@ -84,9 +85,18 @@ implements Model, TransactionParticipant
                     }
                     else
                     {
-                        try (RelationTraversalGuard.Scope ignored = RelationTraversalGuard.enterSave(itemType, item.key(), metadata.name()))
+                        try (RelationTraversalContext.Scope ignored = traversalContext.enterSave(
+                            itemType,
+                            item.key(),
+                            metadata.name(),
+                            relationProvider.cyclePolicy()
+                        ))
                         {
-                            relationProvider.save(item.key(), value);
+                            if (ignored.linked() && relationProvider.cyclePolicy() == RelationCyclePolicy.LINK_EXISTING)
+                            {
+                                continue;
+                            }
+                            relationProvider.save(item.key(), value, traversalContext);
                         }
                     }
                 }

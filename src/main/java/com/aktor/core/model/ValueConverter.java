@@ -30,6 +30,7 @@ public final class ValueConverter<Key>
 
     public Object convertComponent(
         final RowMappingContext context,
+        final RelationTraversalContext traversalContext,
         final String componentName,
         final String componentSnakeName,
         final Class<?> target,
@@ -47,12 +48,22 @@ public final class ValueConverter<Key>
             }
             if (context != null && (Data.class.isAssignableFrom(target) || Data[].class.isAssignableFrom(target)))
             {
-                try (RelationTraversalGuard.Scope ignored = RelationTraversalGuard.enterRead(context.itemType(), key, relationField))
+                final RelationProvider<Key, ?, ?> relationProvider = relationProviderResolver.getRelationProvider(relationField);
+                try (RelationTraversalContext.Scope ignored = traversalContext.enterRead(
+                    context.itemType(),
+                    key,
+                    relationField,
+                    relationProvider.cyclePolicy()
+                ))
                 {
-                    return convertInternal(target, raw, key, relationField);
+                    if (ignored.linked() && relationProvider.cyclePolicy() == RelationCyclePolicy.LINK_EXISTING)
+                    {
+                        return Data[].class.isAssignableFrom(target) ? Array.newInstance(target.getComponentType(), 0) : null;
+                    }
+                    return convertInternal(target, raw, key, relationField, traversalContext);
                 }
             }
-            return convertInternal(target, raw, key, relationField);
+            return convertInternal(target, raw, key, relationField, traversalContext);
         }
         catch (final ConversionException | RuntimeException exception)
         {
@@ -92,7 +103,8 @@ public final class ValueConverter<Key>
         final Class<?> target,
         final String raw,
         final Key key,
-        final String field
+        final String field,
+        final RelationTraversalContext traversalContext
     ) throws ConversionException, ModelException
     {
         final Object object;
@@ -108,7 +120,7 @@ public final class ValueConverter<Key>
                 final RelationProvider<Key, ?, ?> relationProvider = relationProviderResolver.getRelationProvider(field);
                 object = relationProvider.usesInlineSingularRelationStorage() && (raw == null || raw.isBlank())
                     ? null
-                    : relationProvider.single(key);
+                    : relationProvider.single(key, traversalContext);
             }
         }
         else if (Data[].class.isAssignableFrom(target))
@@ -120,7 +132,7 @@ public final class ValueConverter<Key>
             else
             {
                 final RelationProvider<Key, ?, ?> relationProvider = relationProviderResolver.getRelationProvider(field);
-                final Data<?>[] relatedItems = relationProvider.many(key);
+                final Data<?>[] relatedItems = relationProvider.many(key, traversalContext);
                 final int count = relatedItems.length;
                 final Object[] array = (Object[]) Array.newInstance(target.getComponentType(), count);
                 System.arraycopy(relatedItems, 0, array, 0, count);
@@ -159,7 +171,7 @@ public final class ValueConverter<Key>
             final Class<? extends Enum<?>> enumClass = (Class<? extends Enum<?>>) target;
             try
             {
-                object = convertEnum(enumClass.asSubclass(Enum.class), raw);
+            object = convertEnum(enumClass.asSubclass(Enum.class), raw);
             }
             catch (final IllegalArgumentException exception)
             {

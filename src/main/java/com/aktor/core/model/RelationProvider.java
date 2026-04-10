@@ -46,6 +46,7 @@ implements Model
     private final String foreignField;
     private final RelationCardinalityPolicy cardinalityPolicy;
     private final RelationStoragePolicy storagePolicy;
+    private final RelationCyclePolicy cyclePolicy;
     private final RelationSavePolicy savePolicy;
     private final RelationDeletePolicy deletePolicy;
     private final List<TransactionParticipant> transactionParticipants;
@@ -60,6 +61,7 @@ implements Model
             binding.relationFactory(),
             binding.cardinalityPolicy(),
             binding.storagePolicy(),
+            binding.cyclePolicy(),
             binding.savePolicy(),
             binding.deletePolicy()
         );
@@ -73,6 +75,7 @@ implements Model
         final RelationFactory<MainKey, ForeignKey> relationFactory,
         final RelationCardinalityPolicy cardinalityPolicy,
         final RelationStoragePolicy storagePolicy,
+        final RelationCyclePolicy cyclePolicy,
         final RelationSavePolicy savePolicy,
         final RelationDeletePolicy deletePolicy
     )
@@ -89,6 +92,7 @@ implements Model
 
         this.cardinalityPolicy = Objects.requireNonNull(cardinalityPolicy);
         this.storagePolicy = Objects.requireNonNull(storagePolicy);
+        this.cyclePolicy = Objects.requireNonNull(cyclePolicy);
         this.savePolicy = Objects.requireNonNull(savePolicy);
         this.deletePolicy = Objects.requireNonNull(deletePolicy);
         this.transactionParticipants = List.copyOf(
@@ -113,6 +117,7 @@ implements Model
             relationFactory,
             RelationCardinalityPolicy.ONE_TO_ONE,
             RelationStoragePolicy.SEPARATE,
+            RelationCyclePolicy.REJECT,
             savePolicy,
             deletePolicy
         );
@@ -120,11 +125,21 @@ implements Model
 
     public Data<?> single(final MainKey key) throws ModelException
     {
-        final Data<?>[] items = many(key);
+        return single(key, new RelationTraversalContext());
+    }
+
+    Data<?> single(final MainKey key, final RelationTraversalContext traversalContext) throws ModelException
+    {
+        final Data<?>[] items = many(key, traversalContext);
         return items.length > 0 ? items[0] : null;
     }
 
     public Data<?>[] many(final MainKey key) throws ModelException
+    {
+        return many(key, new RelationTraversalContext());
+    }
+
+    Data<?>[] many(final MainKey key, final RelationTraversalContext traversalContext) throws ModelException
     {
         try
         {
@@ -142,8 +157,17 @@ implements Model
             {
                 try
                 {
-                    try (RelationTraversalGuard.Scope ignored = RelationTraversalGuard.enterRead(foreignType, relation.foreignKey(), foreignField))
+                    try (RelationTraversalContext.Scope ignored = traversalContext.enterRead(
+                        foreignType,
+                        relation.foreignKey(),
+                        foreignField,
+                        cyclePolicy
+                    ))
                     {
+                        if (ignored.linked() && cyclePolicy == RelationCyclePolicy.LINK_EXISTING)
+                        {
+                            continue;
+                        }
                         items.add(getForeignRepositoryItem(relation.foreignKey()));
                     }
                 }
@@ -171,18 +195,23 @@ implements Model
 
     void save(final MainKey mainKey, final Object value) throws ModelException
     {
+        save(mainKey, value, new RelationTraversalContext());
+    }
+
+    void save(final MainKey mainKey, final Object value, final RelationTraversalContext traversalContext) throws ModelException
+    {
         executeRelationMutation(
             () -> {
                 final Collection<ForeignKey> foreignKeys = new HashSet<>();
                 if (value instanceof final Data<?> data)
                 {
-                    foreignKeys.add(saveForeign(data));
+                    foreignKeys.add(saveForeign(data, traversalContext));
                 }
                 else if (value instanceof final Data<?>[] array)
                 {
                     for (final Data<?> data : array)
                     {
-                        foreignKeys.add(saveForeign(data));
+                        foreignKeys.add(saveForeign(data, traversalContext));
                     }
                 }
                 else if (value != null)
@@ -255,7 +284,7 @@ implements Model
         return foreignManagement.get(key);
     }
 
-    private ForeignKey saveForeign(final Data<?> data) throws ModelException
+    private ForeignKey saveForeign(final Data<?> data, final RelationTraversalContext traversalContext) throws ModelException
     {
         final ForeignData item;
         try
@@ -279,12 +308,17 @@ implements Model
 
         try
         {
-            try (RelationTraversalGuard.Scope ignored = RelationTraversalGuard.enterSave(
+            try (RelationTraversalContext.Scope ignored = traversalContext.enterSave(
                 foreignType,
                 item.key(),
-                foreignField
+                foreignField,
+                cyclePolicy
             ))
             {
+                if (ignored.linked() && cyclePolicy == RelationCyclePolicy.LINK_EXISTING)
+                {
+                    return item.key();
+                }
                 foreignManagement.save(item);
             }
         }
@@ -410,6 +444,11 @@ implements Model
     boolean usesInlineSingularRelationStorage()
     {
         return storagePolicy == RelationStoragePolicy.INLINE;
+    }
+
+    RelationCyclePolicy cyclePolicy()
+    {
+        return cyclePolicy;
     }
 
     @FunctionalInterface
