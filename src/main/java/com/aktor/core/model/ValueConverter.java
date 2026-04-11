@@ -25,7 +25,7 @@ public final class ValueConverter<Key>
 
     public Object convert(final Class<?> target, final String raw, final Key key, final String field) throws ConversionException, ModelException
     {
-        return convertInternal(target, raw, key, field);
+        return convertInternal(target, raw, key, field, new RelationTraversalContext());
     }
 
     public Object convertComponent(
