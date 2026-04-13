@@ -5,9 +5,11 @@ import com.aktor.core.Repository;
 import com.aktor.core.data.Relation;
 import com.aktor.core.model.Configuration;
 import com.aktor.core.model.Environment;
+import com.aktor.core.model.FactoryContext;
 import com.aktor.core.model.ManagementFactory;
 import com.aktor.core.model.ManagementFactoryLoader;
 import com.aktor.core.model.ManagementProvider;
+import com.aktor.core.model.ManagementRequest;
 import com.aktor.core.model.RelationBinding;
 import com.aktor.core.model.RelationCyclePolicy;
 import com.aktor.core.model.RelationCardinalityPolicy;
@@ -23,25 +25,24 @@ public final class ManagementFactoryRepository
 implements ManagementFactory
 {
     @Override
-    public <Item extends Data<Key>, Key> Management<Item, Key> management(
-        final ManagementProvider provider,
-        final String name,
-        final Class<Item> itemType,
-        final Class<Key> keyType
+    public <Item extends Data<Key>, Key> Management<Item, Key> create(
+        final FactoryContext context,
+        final ManagementRequest<Item, Key> request
     )
     {
+        final ManagementProvider provider = ManagementFactory.requireProvider(context);
         final RelationProviderResolver.Builder<Key> builder = RelationProviderResolver.builder();
-        final Configuration relations = entity(provider.configuration(), name).getConfiguration("relation");
+        final Configuration relations = entity(provider.configuration(), request.name()).getConfiguration("relation");
         for (final String field : relations.keys())
         {
-            builder.add(relationBinding(provider, name, field, relations.getConfiguration(field)));
+            builder.add(relationBinding(provider, request.name(), field, relations.getConfiguration(field)));
         }
 
         final RelationProviderResolver<Key> relationProviderResolver = builder.build();
         final Repository<Item, Key> repository = Objects.requireNonNull(provider).repository(
-            Objects.requireNonNull(name),
-            Objects.requireNonNull(itemType),
-            Objects.requireNonNull(keyType),
+            Objects.requireNonNull(request.name()),
+            Objects.requireNonNull(request.itemType()),
+            Objects.requireNonNull(request.keyType()),
             relationProviderResolver
         );
 

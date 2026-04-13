@@ -8,34 +8,28 @@ import com.aktor.core.RepositoryReadOnly;
 import com.aktor.core.RepositoryRotating;
 import com.aktor.core.model.RelationProviderResolver;
 
+import java.sql.CallableStatement;
+import java.util.List;
+import java.util.Objects;
 import java.util.ServiceLoader;
 
-import java.util.Objects;
-
 public final class RepositoryProvider
+extends Provider<RepositoryFactory, RepositoryFactory>
 {
-    private final Configuration configuration;
-    private final Environment environment;
-
     public RepositoryProvider(final Configuration configuration, final Object... dependencies)
     {
-        this.configuration = Objects.requireNonNull(configuration);
-        this.environment = new EnvironmentDefault();
-        if (dependencies != null)
-        {
-            for (final Object dependency : dependencies)
-            {
-                environment.put(dependency);
-            }
-        }
-        environment.registerLoader(RepositoryFactory.class, new RepositoryAggregate.Loader());
-        environment.registerLoader(RepositoryFactory.class, new RepositoryCache.Loader());
-        environment.registerLoader(RepositoryFactory.class, new RepositoryReadOnly.Loader());
-        environment.registerLoader(RepositoryFactory.class, new RepositoryRotating.Loader());
-        for (final RepositoryFactoryLoader loader : ServiceLoader.load(RepositoryFactoryLoader.class))
-        {
-            environment.registerLoader(RepositoryFactory.class, loader);
-        }
+        super(
+            Objects.requireNonNull(configuration),
+            RepositoryFactory.class,
+            combineLoaders(
+                ServiceLoader.load(RepositoryFactoryLoader.class),
+                new RepositoryAggregate.Loader(),
+                new RepositoryCache.Loader(),
+                new RepositoryReadOnly.Loader(),
+                new RepositoryRotating.Loader()
+            ),
+            dependencies
+        );
     }
 
     public static RepositoryProvider of(final Configuration configuration, final Object... dependencies)
@@ -43,24 +37,14 @@ public final class RepositoryProvider
         return new RepositoryProvider(configuration, dependencies);
     }
 
-    public Configuration configuration()
-    {
-        return configuration;
-    }
-
-    public Environment environment()
-    {
-        return environment;
-    }
-
     public <Dependency> Dependency require(final Class<Dependency> type)
     {
-        return environment.require(Objects.requireNonNull(type));
+        return super.environment().require(Objects.requireNonNull(type));
     }
 
     public String requireConfiguration(final String key, final String label)
     {
-        final String value = configuration.getString(Objects.requireNonNull(key));
+        final String value = configuration().getString(Objects.requireNonNull(key));
         if (value == null)
         {
             throw new IllegalArgumentException(label + " is required at configuration key: " + key);
@@ -88,12 +72,18 @@ public final class RepositoryProvider
         final RelationProviderResolver<Key> relationProviderResolver
     )
     {
-        return RepositoryFactory.of(this, Objects.requireNonNull(name)).repository(
-            this,
-            name,
+        final RepositoryRequest<Item, Key> request = RepositoryFactory.request(
+            Objects.requireNonNull(name),
             Objects.requireNonNull(itemType),
             Objects.requireNonNull(keyType),
             Objects.requireNonNull(relationProviderResolver)
         );
+        return super.instance(
+            request.name(),
+            request,
+            safeName -> RepositoryFactory.of(this, safeName),
+            (factory, safeRequest) -> factory.create(this, safeRequest)
+        );
     }
+
 }

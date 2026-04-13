@@ -7,12 +7,15 @@ import java.util.Objects;
 
 @FunctionalInterface
 public interface ManagementFactory
+extends Factory<ManagementRequest<?, ?>, Management<?, ?>>
 {
-    <Item extends Data<Key>, Key> Management<Item, Key> management(
-        ManagementProvider provider,
-        String name,
-        Class<Item> itemType,
-        Class<Key> keyType
+    String CONFIG_SECTION = "entity";
+    String CONFIG_MANAGEMENT = "management";
+    String CONFIG_KIND = "kind";
+
+    <Item extends Data<Key>, Key> Management<Item, Key> create(
+        FactoryContext context,
+        ManagementRequest<Item, Key> request
     );
 
     static ManagementFactory of(final ManagementProvider provider, final String name)
@@ -20,25 +23,43 @@ public interface ManagementFactory
         final ManagementProvider safeProvider = Objects.requireNonNull(provider);
         final String safeName = Objects.requireNonNull(name);
 
-        final Configuration entities = safeProvider.configuration().getConfiguration("entity");
-        final Configuration entity = entities.has(safeName) ? entities.getConfiguration(safeName) : safeProvider.configuration().getConfiguration(safeName);
-        final Configuration management = entity.getConfiguration("management");
-        final String kind = firstNonBlank(management.getString("kind"), entity.getString("kind"));
-        final String safeKind = kind == null || kind.isBlank() ? "repository" : kind.trim();
-
-        return safeProvider.environment().load(ManagementFactory.class, safeKind);
+        final Configuration entity = Resolver.config(safeProvider.configuration(), CONFIG_SECTION, safeName);
+        final Configuration management = entity.getConfiguration(CONFIG_MANAGEMENT);
+        final String kind = management.getString(CONFIG_KIND);
+        if (kind != null && !kind.isBlank())
+        {
+            return safeProvider.environment().load(ManagementFactory.class, kind.trim());
+        }
+        final String legacyKind = entity.getString(CONFIG_KIND);
+        if (legacyKind != null && !legacyKind.isBlank())
+        {
+            return safeProvider.environment().load(ManagementFactory.class, legacyKind.trim());
+        }
+        throw new IllegalArgumentException(
+            CONFIG_MANAGEMENT + "." + CONFIG_KIND + " is required for entity: " + safeName
+        );
     }
 
-    private static String firstNonBlank(final String first, final String second)
+    static ManagementProvider requireProvider(final FactoryContext context)
     {
-        if (first != null && !first.isBlank())
+        if (context instanceof final ManagementProvider provider)
         {
-            return first.trim();
+            return provider;
         }
-        if (second != null && !second.isBlank())
-        {
-            return second.trim();
-        }
-        return null;
+        throw new IllegalArgumentException("ManagementFactory requires ManagementProvider context.");
+    }
+
+    @SuppressWarnings("unchecked")
+    static <Item extends Data<Key>, Key> ManagementRequest<Item, Key> request(
+        final String name,
+        final Class<Item> itemType,
+        final Class<Key> keyType
+    )
+    {
+        return new ManagementRequest<>(
+            Objects.requireNonNull(name),
+            Objects.requireNonNull(itemType),
+            Objects.requireNonNull(keyType)
+        );
     }
 }

@@ -2,9 +2,10 @@ package com.aktor.core;
 
 import com.aktor.core.model.Configuration;
 import com.aktor.core.model.Environment;
+import com.aktor.core.model.FactoryContext;
 import com.aktor.core.model.RepositoryFactory;
 import com.aktor.core.model.RepositoryFactoryLoader;
-import com.aktor.core.model.RepositoryProvider;
+import com.aktor.core.model.RepositoryRequest;
 import com.aktor.core.exception.DeleteException;
 import com.aktor.core.exception.SaveException;
 
@@ -42,29 +43,17 @@ extends RepositoryWrapper<Item, Key>
         }
     }
 
-    public static final class Factory implements RepositoryFactory
+    public static final class Factory
+    implements RepositoryFactory
     {
         @Override
-        public <Item extends Data<Key>, Key> Repository<Item, Key> repository(
-            final RepositoryProvider provider,
-            final String name,
-            final Class<Item> itemType,
-            final Class<Key> keyType
+        public <Item extends Data<Key>, Key> Repository<Item, Key> create(
+            final FactoryContext context,
+            final RepositoryRequest<Item, Key> request
         )
         {
-            return repository(provider, name, itemType, keyType, new com.aktor.core.model.RelationProviderResolver<>());
-        }
-
-        @Override
-        public <Item extends Data<Key>, Key> Repository<Item, Key> repository(
-            final RepositoryProvider provider,
-            final String name,
-            final Class<Item> itemType,
-            final Class<Key> keyType,
-            final com.aktor.core.model.RelationProviderResolver<Key> relationProviderResolver
-        )
-        {
-            final Configuration wrapper = wrapper(provider.configuration(), name);
+            final RepositoryProvider provider = RepositoryFactory.requireProvider(context);
+            final Configuration wrapper = wrapper(provider.configuration(), request.name());
             final String source = firstNonBlank(
                 singleSource(wrapper.getConfiguration("sources")),
                 wrapper.getString("source"),
@@ -72,10 +61,18 @@ extends RepositoryWrapper<Item, Key>
             );
             if (source == null || source.isBlank())
             {
-                throw new IllegalArgumentException("Wrapper source is required for repository: " + name);
+                throw new IllegalArgumentException("Wrapper source is required for repository: " + request.name());
             }
             final RepositoryReadOnlyMode mode = enumValue(wrapper.getString("mode"), RepositoryReadOnlyMode.THROW);
-            return new RepositoryReadOnly<>(provider.repository(source, itemType, keyType, relationProviderResolver), mode);
+            return new RepositoryReadOnly<>(
+                provider.repository(
+                    source,
+                    request.itemType(),
+                    request.keyType(),
+                    request.relationProviderResolver()
+                ),
+                mode
+            );
         }
 
         private static Configuration wrapper(final Configuration configuration, final String name)

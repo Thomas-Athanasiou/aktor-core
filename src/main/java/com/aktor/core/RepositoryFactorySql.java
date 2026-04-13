@@ -3,11 +3,13 @@ package com.aktor.core;
 import com.aktor.core.data.Relation;
 import com.aktor.core.model.Configuration;
 import com.aktor.core.model.Environment;
+import com.aktor.core.model.FactoryContext;
 import com.aktor.core.model.FieldResolver;
 import com.aktor.core.model.RepositoryFactory;
 import com.aktor.core.model.RepositoryFactoryLoader;
 import com.aktor.core.model.RepositoryProvider;
 import com.aktor.core.model.RelationProviderResolver;
+import com.aktor.core.model.RepositoryRequest;
 
 import java.sql.Connection;
 import java.util.LinkedHashMap;
@@ -25,41 +27,26 @@ implements RepositoryFactory
     }
 
     @Override
-    public <Item extends Data<Key>, Key> Repository<Item, Key> repository(
-        final RepositoryProvider provider,
-        final String name,
-        final Class<Item> itemType,
-        final Class<Key> keyType
+    public <Item extends Data<Key>, Key> Repository<Item, Key> create(
+        final FactoryContext context,
+        final RepositoryRequest<Item, Key> request
     )
     {
-        return repository(provider, name, itemType, keyType, new RelationProviderResolver<>());
-    }
-
-    @Override
-    public <Item extends Data<Key>, Key> Repository<Item, Key> repository(
-        final RepositoryProvider provider,
-        final String name,
-        final Class<Item> itemType,
-        final Class<Key> keyType,
-        final RelationProviderResolver<Key> relationProviderResolver
-    )
-    {
-        if (Relation.class.isAssignableFrom(Objects.requireNonNull(itemType)))
+        final RepositoryProvider provider = RepositoryFactory.requireProvider(context);
+        if (Relation.class.isAssignableFrom(Objects.requireNonNull(request.itemType())))
         {
-            return relationRepository(provider, name, itemType);
+            return relationRepository(provider, request.name(), request.itemType());
         }
-        if (!Record.class.isAssignableFrom(itemType))
+        if (!Record.class.isAssignableFrom(request.itemType()))
         {
-            throw new IllegalArgumentException("SQL repository requires record type: " + itemType.getName());
+            throw new IllegalArgumentException("SQL repository requires record type: " + request.itemType().getName());
         }
-        @SuppressWarnings("unchecked")
-        final Class<Item> recordType = (Class<Item>) itemType;
         return RepositorySql.of(
             connection,
-            recordType,
-            table(Objects.requireNonNull(provider).configuration(), Objects.requireNonNull(name)),
+            request.itemType(),
+            table(Objects.requireNonNull(provider).configuration(), Objects.requireNonNull(request.name())),
             "sqlite",
-            relationProviderResolver
+            request.relationProviderResolver()
         );
     }
 

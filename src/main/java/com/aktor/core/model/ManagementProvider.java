@@ -10,6 +10,7 @@ import java.util.ServiceLoader;
 import java.util.Objects;
 
 public final class ManagementProvider
+implements FactoryContext
 {
     private final RepositoryProvider repositories;
 
@@ -80,11 +81,11 @@ public final class ManagementProvider
         final Class<Key> keyType
     )
     {
-        return ManagementFactory.of(this, Objects.requireNonNull(name)).management(
-            this,
-            name,
+        final ManagementRequest<Item, Key> request = ManagementFactory.request(
+            Objects.requireNonNull(name),
             Objects.requireNonNull(itemType),
             Objects.requireNonNull(keyType)
         );
+        return ManagementFactory.of(this, request.name()).create(this, request);
     }
 }
