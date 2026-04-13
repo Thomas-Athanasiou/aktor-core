@@ -25,7 +25,7 @@ public final class ManagementFactoryRepository
 implements ManagementFactory
 {
     @Override
-    public <Item extends Data<Key>, Key> Management<Item, Key> create(
+    public <Item extends Data<Key>, Key> Management<Item, Key> createTyped(
         final FactoryContext context,
         final ManagementRequest<Item, Key> request
     )

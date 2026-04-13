@@ -8,19 +8,17 @@ import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-public class Provider<FactoryType, InstanceType>
+public class Provider<Factory>
 implements FactoryContext
 {
     private final Configuration configuration;
 
     private final Environment environment;
 
-    private final Map<String, InstanceType> cache = new LinkedHashMap<>();
-
     protected Provider(
         final Configuration configuration,
-        final Class<FactoryType> factoryClass,
-        final Iterable<? extends Loader<? extends FactoryType>> loaders,
+        final Class<Factory> factoryClass,
+        final Iterable<? extends Loader<? extends Factory>> loaders,
         final Object... dependencies
     )
     {
@@ -36,7 +34,7 @@ implements FactoryContext
         }
         if (loaders != null)
         {
-            for (final Loader<? extends FactoryType> loader : loaders)
+            for (final Loader<? extends Factory> loader : loaders)
             {
                 if (loader != null)
                 {
@@ -88,40 +86,24 @@ implements FactoryContext
         return environment;
     }
 
-    protected InstanceType instance(
-        final String name,
-        final Function<String, FactoryType> factoryResolver,
-        final BiFunction<FactoryType, String, InstanceType> instanceCreator
-    )
+    @FunctionalInterface
+    public interface FactoryInvoker<Request, Instance>
     {
-        final String safeName = Objects.requireNonNull(name);
-        final InstanceType existing = cache.get(safeName);
-        if (existing != null)
-        {
-            return existing;
-        }
-        final FactoryType factory = Objects.requireNonNull(factoryResolver.apply(safeName));
-        final InstanceType created = Objects.requireNonNull(instanceCreator.apply(factory, safeName));
-        cache.put(safeName, created);
-        return created;
+        Instance create(String name, FactoryContext context, Request request);
     }
 
-    protected <Request> InstanceType instance(
+    protected <Instance> Instance instance(final String name, final FactoryInvoker<String, Instance> invoker)
+    {
+        return instance(name, name, invoker);
+    }
+
+    protected <Request, Instance> Instance instance(
         final String name,
         final Request request,
-        final Function<String, FactoryType> factoryResolver,
-        final BiFunction<FactoryType, Request, InstanceType> instanceCreator
+        final FactoryInvoker<Request, Instance> invoker
     )
     {
         final String safeName = Objects.requireNonNull(name);
-        final InstanceType existing = cache.get(safeName);
-        if (existing != null)
-        {
-            return existing;
-        }
-        final FactoryType factory = Objects.requireNonNull(factoryResolver.apply(safeName));
-        final InstanceType created = Objects.requireNonNull(instanceCreator.apply(factory, request));
-        cache.put(safeName, created);
-        return created;
+        return Objects.requireNonNull(Objects.requireNonNull(invoker).create(safeName, this, request));
     }
 }

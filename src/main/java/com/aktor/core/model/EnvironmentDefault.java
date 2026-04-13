@@ -1,5 +1,6 @@
 package com.aktor.core.model;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -11,9 +12,9 @@ implements Environment
 {
     private record LoaderKey(Class<?> type, String kind)
     {
-        private LoaderKey
+        LoaderKey
         {
-            type = Objects.requireNonNull(type);
+            Objects.requireNonNull(type);
             kind = Objects.requireNonNull(kind);
             if (kind.isBlank())
             {
@@ -22,7 +23,8 @@ implements Environment
         }
     }
 
-    private final List<Object> services = new CopyOnWriteArrayList<>();
+    private final Collection<Object> services = new CopyOnWriteArrayList<>();
+
     private final ConcurrentMap<LoaderKey, Loader<?>> loaders = new ConcurrentHashMap<>();
 
     @Override

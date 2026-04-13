@@ -5,7 +5,6 @@ import com.aktor.core.service.Management;
 
 import java.util.Objects;
 
-@FunctionalInterface
 public interface ManagementFactory
 extends Factory<ManagementRequest<?, ?>, Management<?, ?>>
 {
@@ -13,7 +12,16 @@ extends Factory<ManagementRequest<?, ?>, Management<?, ?>>
     String CONFIG_MANAGEMENT = "management";
     String CONFIG_KIND = "kind";
 
-    <Item extends Data<Key>, Key> Management<Item, Key> create(
+    @Override
+    default Management<?, ?> create(
+        final FactoryContext context,
+        final ManagementRequest<?, ?> request
+    )
+    {
+        return createTyped(context, request);
+    }
+
+    <Item extends Data<Key>, Key> Management<Item, Key> createTyped(
         FactoryContext context,
         ManagementRequest<Item, Key> request
     );
@@ -30,11 +38,6 @@ extends Factory<ManagementRequest<?, ?>, Management<?, ?>>
         {
             return safeProvider.environment().load(ManagementFactory.class, kind.trim());
         }
-        final String legacyKind = entity.getString(CONFIG_KIND);
-        if (legacyKind != null && !legacyKind.isBlank())
-        {
-            return safeProvider.environment().load(ManagementFactory.class, legacyKind.trim());
-        }
         throw new IllegalArgumentException(
             CONFIG_MANAGEMENT + "." + CONFIG_KIND + " is required for entity: " + safeName
         );
@@ -49,7 +52,6 @@ extends Factory<ManagementRequest<?, ?>, Management<?, ?>>
         throw new IllegalArgumentException("ManagementFactory requires ManagementProvider context.");
     }
 
-    @SuppressWarnings("unchecked")
     static <Item extends Data<Key>, Key> ManagementRequest<Item, Key> request(
         final String name,
         final Class<Item> itemType,

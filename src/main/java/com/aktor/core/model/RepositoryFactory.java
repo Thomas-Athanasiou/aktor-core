@@ -5,7 +5,6 @@ import com.aktor.core.Repository;
 
 import java.util.Objects;
 
-@FunctionalInterface
 public interface RepositoryFactory
 extends Factory<RepositoryRequest<?, ?>, Repository<?, ?>>
 {
@@ -15,7 +14,16 @@ extends Factory<RepositoryRequest<?, ?>, Repository<?, ?>>
     String CONFIG_AGGREGATE = "aggregate";
     String CONFIG_KIND = "kind";
 
-    <Item extends Data<Key>, Key> Repository<Item, Key> create(
+    @Override
+    default Repository<?, ?> create(
+        final FactoryContext context,
+        final RepositoryRequest<?, ?> request
+    )
+    {
+        return createTyped(context, request);
+    }
+
+    <Item extends Data<Key>, Key> Repository<Item, Key> createTyped(
         FactoryContext context,
         RepositoryRequest<Item, Key> request
     );
@@ -44,11 +52,6 @@ extends Factory<RepositoryRequest<?, ?>, Repository<?, ?>>
         {
             return safeProvider.environment().load(RepositoryFactory.class, kind.trim());
         }
-        final String legacyKind = entity.getString(CONFIG_KIND);
-        if (legacyKind != null && !legacyKind.isBlank())
-        {
-            return safeProvider.environment().load(RepositoryFactory.class, legacyKind.trim());
-        }
         throw new IllegalArgumentException(
             CONFIG_STORAGE + "." + CONFIG_KIND + " is required for repository entity: " + safeName
         );
@@ -63,7 +66,6 @@ extends Factory<RepositoryRequest<?, ?>, Repository<?, ?>>
         throw new IllegalArgumentException("RepositoryFactory requires RepositoryProvider context.");
     }
 
-    @SuppressWarnings("unchecked")
     static <Item extends Data<Key>, Key> RepositoryRequest<Item, Key> request(
         final String name,
         final Class<Item> itemType,

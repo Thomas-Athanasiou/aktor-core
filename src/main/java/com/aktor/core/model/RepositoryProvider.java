@@ -6,15 +6,12 @@ import com.aktor.core.RepositoryAggregate;
 import com.aktor.core.RepositoryCache;
 import com.aktor.core.RepositoryReadOnly;
 import com.aktor.core.RepositoryRotating;
-import com.aktor.core.model.RelationProviderResolver;
 
-import java.sql.CallableStatement;
-import java.util.List;
 import java.util.Objects;
 import java.util.ServiceLoader;
 
 public final class RepositoryProvider
-extends Provider<RepositoryFactory, RepositoryFactory>
+extends Provider<RepositoryFactory>
 {
     public RepositoryProvider(final Configuration configuration, final Object... dependencies)
     {
@@ -42,30 +39,16 @@ extends Provider<RepositoryFactory, RepositoryFactory>
         return super.environment().require(Objects.requireNonNull(type));
     }
 
-    public String requireConfiguration(final String key, final String label)
-    {
-        final String value = configuration().getString(Objects.requireNonNull(key));
-        if (value == null)
-        {
-            throw new IllegalArgumentException(label + " is required at configuration key: " + key);
-        }
-        else if (value.isBlank())
-        {
-            throw new IllegalArgumentException(label + " cannot be blank at configuration key: " + key);
-        }
-        return value;
-    }
-
-    public <Item extends Data<Key>, Key> Repository<Item, Key> repository(
+    public <Item extends Data<Key>, Key> Repository<Item, Key> instance(
         final String name,
         final Class<Item> itemType,
         final Class<Key> keyType
     )
     {
-        return repository(name, itemType, keyType, new RelationProviderResolver<>());
+        return instance(name, itemType, keyType, new RelationProviderResolver<>());
     }
 
-    public <Item extends Data<Key>, Key> Repository<Item, Key> repository(
+    public <Item extends Data<Key>, Key> Repository<Item, Key> instance(
         final String name,
         final Class<Item> itemType,
         final Class<Key> keyType,
@@ -81,8 +64,7 @@ extends Provider<RepositoryFactory, RepositoryFactory>
         return super.instance(
             request.name(),
             request,
-            safeName -> RepositoryFactory.of(this, safeName),
-            (factory, safeRequest) -> factory.create(this, safeRequest)
+            (safeName, context, safeRequest) -> RepositoryFactory.of(this, safeName).create(context, safeRequest)
         );
     }
 

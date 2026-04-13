@@ -27,7 +27,7 @@ implements RepositoryFactory
     }
 
     @Override
-    public <Item extends Data<Key>, Key> Repository<Item, Key> create(
+    public <Item extends Data<Key>, Key> Repository<Item, Key> createTyped(
         final FactoryContext context,
         final RepositoryRequest<Item, Key> request
     )

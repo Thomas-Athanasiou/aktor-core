@@ -7,6 +7,7 @@ import com.aktor.core.model.Environment;
 import com.aktor.core.model.FactoryContext;
 import com.aktor.core.model.RepositoryFactory;
 import com.aktor.core.model.RepositoryFactoryLoader;
+import com.aktor.core.model.RepositoryProvider;
 import com.aktor.core.model.RepositoryRequest;
 import com.aktor.core.util.CompositeAccessUtil;
 import com.aktor.core.util.CompositeSearchUtil;
@@ -42,7 +43,7 @@ extends RepositoryComposite<Item, Key>
     implements RepositoryFactory
     {
         @Override
-        public <Item extends Data<Key>, Key> Repository<Item, Key> create(
+        public <Item extends Data<Key>, Key> Repository<Item, Key> createTyped(
             final FactoryContext context,
             final RepositoryRequest<Item, Key> request
         )
@@ -54,7 +55,7 @@ extends RepositoryComposite<Item, Key>
             for (final String sourceName : sources.keys())
             {
                 repositories.add(
-                    provider.repository(
+                    provider.instance(
                         sourceName,
                         request.itemType(),
                         request.keyType(),

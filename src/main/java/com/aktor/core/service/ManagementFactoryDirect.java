@@ -6,6 +6,7 @@ import com.aktor.core.model.Environment;
 import com.aktor.core.model.FactoryContext;
 import com.aktor.core.model.ManagementFactory;
 import com.aktor.core.model.ManagementFactoryLoader;
+import com.aktor.core.model.ManagementProvider;
 import com.aktor.core.model.ManagementRequest;
 
 import java.util.Objects;
@@ -14,7 +15,7 @@ public final class ManagementFactoryDirect
 implements ManagementFactory
 {
     @Override
-    public <Item extends Data<Key>, Key> Management<Item, Key> create(
+    public <Item extends Data<Key>, Key> Management<Item, Key> createTyped(
         final FactoryContext context,
         final ManagementRequest<Item, Key> request
     )

@@ -10,20 +10,23 @@ import java.util.ServiceLoader;
 import java.util.Objects;
 
 public final class ManagementProvider
-implements FactoryContext
+extends Provider<ManagementFactory>
 {
     private final RepositoryProvider repositories;
 
     public ManagementProvider(final RepositoryProvider repositories)
     {
-        this.repositories = Objects.requireNonNull(repositories);
-        final Environment environment = repositories.environment();
-        environment.registerLoader(ManagementFactory.class, new ManagementFactoryDirect.Loader());
-        environment.registerLoader(ManagementFactory.class, new ManagementFactoryRepository.Loader());
-        for (final ManagementFactoryLoader loader : ServiceLoader.load(ManagementFactoryLoader.class))
-        {
-            environment.registerLoader(ManagementFactory.class, loader);
-        }
+        super(
+            Objects.requireNonNull(repositories).configuration(),
+            ManagementFactory.class,
+            combineLoaders(
+                ServiceLoader.load(ManagementFactoryLoader.class),
+                new ManagementFactoryDirect.Loader(),
+                new ManagementFactoryRepository.Loader()
+            ),
+            repositories
+        );
+        this.repositories = repositories;
     }
 
     public static ManagementProvider of(final RepositoryProvider repositories)
@@ -31,29 +34,19 @@ implements FactoryContext
         return new ManagementProvider(repositories);
     }
 
-    public RepositoryProvider repositories()
-    {
-        return repositories;
-    }
-
     public Configuration configuration()
     {
-        return repositories.configuration();
+        return super.configuration();
     }
 
     public Environment environment()
     {
-        return repositories.environment();
+        return super.environment();
     }
 
     public <Dependency> Dependency require(final Class<Dependency> type)
     {
         return repositories.require(type);
-    }
-
-    public String requireConfiguration(final String key, final String label)
-    {
-        return repositories.requireConfiguration(key, label);
     }
 
     public <Item extends Data<Key>, Key> Repository<Item, Key> repository(
@@ -62,7 +55,7 @@ implements FactoryContext
         final Class<Key> keyType
     )
     {
-        return repositories.repository(name, itemType, keyType);
+        return repositories.instance(name, itemType, keyType);
     }
 
     public <Item extends Data<Key>, Key> Repository<Item, Key> repository(
@@ -72,7 +65,7 @@ implements FactoryContext
         final com.aktor.core.model.RelationProviderResolver<Key> relationProviderResolver
     )
     {
-        return repositories.repository(name, itemType, keyType, relationProviderResolver);
+        return repositories.instance(name, itemType, keyType, relationProviderResolver);
     }
 
     public <Item extends Data<Key>, Key> Management<Item, Key> management(
@@ -86,6 +79,10 @@ implements FactoryContext
             Objects.requireNonNull(itemType),
             Objects.requireNonNull(keyType)
         );
-        return ManagementFactory.of(this, request.name()).create(this, request);
+        return super.instance(
+            request.name(),
+            request,
+            (safeName, context, safeRequest) -> ManagementFactory.of(this, safeName).create(context, safeRequest)
+        );
     }
 }
