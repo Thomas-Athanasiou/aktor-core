@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public final class RepositorySql<Item extends Record & Data<Key>, Key>
+public final class RepositorySql<Item extends Data<Key>, Key>
 implements Repository<Item, Key>, TransactionParticipant
 {
     private static final String LOGICAL_KEY_FIELD_NAME = "key";
@@ -76,7 +76,7 @@ implements Repository<Item, Key>, TransactionParticipant
         this.fixedDeleteSql = Objects.requireNonNull(fixedDeleteSql);
     }
 
-    public static <Item extends Record & Data<Key>, Key> Repository<Item, Key> of(
+    public static <Item extends Data<Key>, Key> Repository<Item, Key> of(
         final Connection connection,
         final Class<Item> type,
         final String table,
@@ -86,7 +86,7 @@ implements Repository<Item, Key>, TransactionParticipant
         return of(connection, type, table, driver, FieldResolver.mapped(type), new RelationProviderResolver<>());
     }
 
-    public static <Item extends Record & Data<Key>, Key> Repository<Item, Key> of(
+    public static <Item extends Data<Key>, Key> Repository<Item, Key> of(
         final Connection connection,
         final Class<Item> type,
         final String table,
@@ -97,7 +97,7 @@ implements Repository<Item, Key>, TransactionParticipant
         return of(connection, type, table, driver, FieldResolver.mapped(type), relationProviderResolver);
     }
 
-    public static <Item extends Record & Data<Key>, Key> Repository<Item, Key> of(
+    public static <Item extends Data<Key>, Key> Repository<Item, Key> of(
         final Connection connection,
         final Class<Item> type,
         final String table,
@@ -108,7 +108,7 @@ implements Repository<Item, Key>, TransactionParticipant
         return of(connection, type, table, driver, fieldResolver, new RelationProviderResolver<>());
     }
 
-    public static <Item extends Record & Data<Key>, Key> Repository<Item, Key> of(
+    public static <Item extends Data<Key>, Key> Repository<Item, Key> of(
         final Connection connection,
         final Class<Item> type,
         final String table,
@@ -489,7 +489,7 @@ implements Repository<Item, Key>, TransactionParticipant
         return cachedDeleteStatement;
     }
 
-    private static <Item extends Record & Data<Key>, Key> Converter<ResultSet, Item> createResultSetParser(
+    private static <Item extends Data<Key>, Key> Converter<ResultSet, Item> createResultSetParser(
         final Class<Item> type,
         final FieldResolver fieldResolver,
         final RelationProviderResolver<Key> relationProviderResolver

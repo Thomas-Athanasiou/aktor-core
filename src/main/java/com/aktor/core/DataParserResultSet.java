@@ -9,7 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public class DataParserResultSet<Item extends java.lang.Record & Data<?>>
+public class DataParserResultSet<Item extends Data<?>>
 implements Converter<ResultSet, Item>
 {
     private final Mapper<Item, ?> mapper;
