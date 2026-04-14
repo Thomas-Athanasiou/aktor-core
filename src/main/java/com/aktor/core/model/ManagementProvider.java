@@ -1,7 +1,6 @@
 package com.aktor.core.model;
 
 import com.aktor.core.Data;
-import com.aktor.core.Repository;
 import com.aktor.core.service.ManagementFactoryDirect;
 import com.aktor.core.service.ManagementFactoryRepository;
 import com.aktor.core.service.Management;
@@ -12,9 +11,9 @@ import java.util.Objects;
 public final class ManagementProvider
 extends Provider<ManagementFactory>
 {
-    private final RepositoryProvider repositories;
+    private final RepositoryProvider<?, ?> repositories;
 
-    public ManagementProvider(final RepositoryProvider repositories)
+    public ManagementProvider(final RepositoryProvider<?, ?> repositories)
     {
         super(
             Objects.requireNonNull(repositories).configuration(),
@@ -29,7 +28,7 @@ extends Provider<ManagementFactory>
         this.repositories = repositories;
     }
 
-    public static ManagementProvider of(final RepositoryProvider repositories)
+    public static ManagementProvider of(final RepositoryProvider<?, ?> repositories)
     {
         return new ManagementProvider(repositories);
     }
@@ -49,23 +48,10 @@ extends Provider<ManagementFactory>
         return repositories.require(type);
     }
 
-    public <Item extends Data<Key>, Key> Repository<Item, Key> repository(
-        final String name,
-        final Class<Item> itemType,
-        final Class<Key> keyType
-    )
+    @SuppressWarnings("unchecked")
+    public <Item extends Data<Key>, Key> RepositoryProvider<Item, Key> repositories()
     {
-        return repositories.instance(name, itemType, keyType);
-    }
-
-    public <Item extends Data<Key>, Key> Repository<Item, Key> repository(
-        final String name,
-        final Class<Item> itemType,
-        final Class<Key> keyType,
-        final com.aktor.core.model.RelationProviderResolver<Key> relationProviderResolver
-    )
-    {
-        return repositories.instance(name, itemType, keyType, relationProviderResolver);
+        return (RepositoryProvider<Item, Key>) repositories;
     }
 
     public <Item extends Data<Key>, Key> Management<Item, Key> management(
@@ -82,7 +68,7 @@ extends Provider<ManagementFactory>
         return super.instance(
             request.name(),
             request,
-            (safeName, context, safeRequest) -> ManagementFactory.of(this, safeName).create(context, safeRequest)
+            (safeName, context, safeRequest) -> ManagementFactory.of(this, safeName).createTyped(context, safeRequest)
         );
     }
 }

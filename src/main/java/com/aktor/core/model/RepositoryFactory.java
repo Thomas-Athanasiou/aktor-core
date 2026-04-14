@@ -5,8 +5,8 @@ import com.aktor.core.Repository;
 
 import java.util.Objects;
 
-public interface RepositoryFactory
-extends Factory<RepositoryRequest<?, ?>, Repository<?, ?>>
+public interface RepositoryFactory<Item extends Data<Key>, Key>
+extends Factory<RepositoryRequest<Item, Key>, Repository<Item, Key>>
 {
     String CONFIG_SECTION = "entity";
     String CONFIG_STORAGE = "storage";
@@ -15,22 +15,17 @@ extends Factory<RepositoryRequest<?, ?>, Repository<?, ?>>
     String CONFIG_KIND = "kind";
 
     @Override
-    default Repository<?, ?> create(
-        final FactoryContext context,
-        final RepositoryRequest<?, ?> request
-    )
-    {
-        return createTyped(context, request);
-    }
-
-    <Item extends Data<Key>, Key> Repository<Item, Key> createTyped(
+    Repository<Item, Key> create(
         FactoryContext context,
         RepositoryRequest<Item, Key> request
     );
 
-    static RepositoryFactory of(final RepositoryProvider provider, final String name)
+    static <Item extends Data<Key>, Key> RepositoryFactory<Item, Key> of(
+        final RepositoryProvider<Item, Key> provider,
+        final String name
+    )
     {
-        final RepositoryProvider safeProvider = Objects.requireNonNull(provider);
+        final RepositoryProvider<Item, Key> safeProvider = Objects.requireNonNull(provider);
         final String safeName = Objects.requireNonNull(name);
 
         final Configuration entity = Resolver.config(safeProvider.configuration(), CONFIG_SECTION, safeName);

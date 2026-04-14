@@ -2,11 +2,7 @@ package com.aktor.core.model;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Objects;
-import java.util.function.BiFunction;
-import java.util.function.Function;
 
 public class Provider<Factory>
 implements FactoryContext
@@ -103,7 +99,6 @@ implements FactoryContext
         final FactoryInvoker<Request, Instance> invoker
     )
     {
-        final String safeName = Objects.requireNonNull(name);
-        return Objects.requireNonNull(Objects.requireNonNull(invoker).create(safeName, this, request));
+        return Objects.requireNonNull(Objects.requireNonNull(invoker).create(Objects.requireNonNull(name), this, request));
     }
 }

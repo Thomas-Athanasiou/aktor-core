@@ -10,28 +10,25 @@ import com.aktor.core.RepositoryRotating;
 import java.util.Objects;
 import java.util.ServiceLoader;
 
-public final class RepositoryProvider
-extends Provider<RepositoryFactory>
+public final class RepositoryProvider<Item extends Data<Key>, Key>
+extends Provider<RepositoryFactory<Item, Key>>
 {
     public RepositoryProvider(final Configuration configuration, final Object... dependencies)
     {
         super(
             Objects.requireNonNull(configuration),
-            RepositoryFactory.class,
-            combineLoaders(
-                ServiceLoader.load(RepositoryFactoryLoader.class),
-                new RepositoryAggregate.Loader(),
-                new RepositoryCache.Loader(),
-                new RepositoryReadOnly.Loader(),
-                new RepositoryRotating.Loader()
-            ),
+            factoryClass(),
+            loaders(),
             dependencies
         );
     }
 
-    public static RepositoryProvider of(final Configuration configuration, final Object... dependencies)
+    public static <Item extends Data<Key>, Key> RepositoryProvider<Item, Key> of(
+        final Configuration configuration,
+        final Object... dependencies
+    )
     {
-        return new RepositoryProvider(configuration, dependencies);
+        return new RepositoryProvider<>(configuration, dependencies);
     }
 
     public <Dependency> Dependency require(final Class<Dependency> type)
@@ -39,7 +36,7 @@ extends Provider<RepositoryFactory>
         return super.environment().require(Objects.requireNonNull(type));
     }
 
-    public <Item extends Data<Key>, Key> Repository<Item, Key> instance(
+    public Repository<Item, Key> instance(
         final String name,
         final Class<Item> itemType,
         final Class<Key> keyType
@@ -48,7 +45,7 @@ extends Provider<RepositoryFactory>
         return instance(name, itemType, keyType, new RelationProviderResolver<>());
     }
 
-    public <Item extends Data<Key>, Key> Repository<Item, Key> instance(
+    public Repository<Item, Key> instance(
         final String name,
         final Class<Item> itemType,
         final Class<Key> keyType,
@@ -64,8 +61,47 @@ extends Provider<RepositoryFactory>
         return super.instance(
             request.name(),
             request,
-            (safeName, context, safeRequest) -> RepositoryFactory.of(this, safeName).create(context, safeRequest)
+            this::createRepository
         );
     }
 
+    public Repository<Item, Key> instance(final RepositoryRequest<Item, Key> request)
+    {
+        final RepositoryRequest<Item, Key> safeRequest = Objects.requireNonNull(request);
+        return super.instance(
+            safeRequest.name(),
+            safeRequest,
+            this::createRepository
+        );
+    }
+
+    private Repository<Item, Key> createRepository(
+        final String name,
+        final FactoryContext context,
+        final RepositoryRequest<Item, Key> request
+    )
+    {
+        return RepositoryFactory.of(this, name).create(context, request);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <Item extends Data<Key>, Key> Class<RepositoryFactory<Item, Key>> factoryClass()
+    {
+        return (Class<RepositoryFactory<Item, Key>>) (Class<?>) RepositoryFactory.class;
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static <Item extends Data<Key>, Key> Iterable<? extends Loader<? extends RepositoryFactory<Item, Key>>> loaders()
+    {
+        final Iterable<? extends Loader<? extends RepositoryFactory<Item, Key>>> discovered = (Iterable) ServiceLoader.load(
+            RepositoryFactoryLoader.class
+        );
+        return combineLoaders(
+             discovered,
+             new RepositoryAggregate.Loader<>(),
+             new RepositoryCache.Loader<>(),
+             new RepositoryReadOnly.Loader<>(),
+             new RepositoryRotating.Loader<>()
+         );
+    }
 }

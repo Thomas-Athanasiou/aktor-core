@@ -8,6 +8,8 @@ import com.aktor.core.model.ManagementFactory;
 import com.aktor.core.model.ManagementFactoryLoader;
 import com.aktor.core.model.ManagementProvider;
 import com.aktor.core.model.ManagementRequest;
+import com.aktor.core.model.RepositoryFactory;
+import com.aktor.core.model.RepositoryRequest;
 
 import java.util.Objects;
 
@@ -21,10 +23,14 @@ implements ManagementFactory
     )
     {
         final ManagementProvider provider = ManagementFactory.requireProvider(context);
-        final Repository<Item, Key> repository = Objects.requireNonNull(provider).repository(
+        final RepositoryRequest<Item, Key> repositoryRequest = RepositoryFactory.request(
             Objects.requireNonNull(request.name()),
             Objects.requireNonNull(request.itemType()),
-            Objects.requireNonNull(request.keyType())
+            Objects.requireNonNull(request.keyType()),
+            new com.aktor.core.model.RelationProviderResolver<>()
+        );
+        final Repository<Item, Key> repository = Objects.requireNonNull(provider).<Item, Key>repositories().instance(
+            repositoryRequest
         );
         return ManagementRepository.noRelations(repository);
     }

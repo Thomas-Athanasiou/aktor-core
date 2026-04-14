@@ -69,11 +69,11 @@ extends RepositoryWrapper<Item, Key>
         }
     }
 
-    public static final class Factory
-    implements RepositoryFactory
+    public static final class Factory<Item extends Data<Key>, Key>
+    implements RepositoryFactory<Item, Key>
     {
         @Override
-        public <Item extends Data<Key>, Key> Repository<Item, Key> createTyped(
+        public Repository<Item, Key> create(
             final FactoryContext context,
             final RepositoryRequest<Item, Key> request
         )
@@ -87,11 +87,11 @@ extends RepositoryWrapper<Item, Key>
             );
             if (source == null || source.isBlank())
             {
-                throw new IllegalArgumentException("Wrapper source is required for repository: " + name);
+                throw new IllegalArgumentException("Wrapper source is required for repository: " + request.name());
             }
             final String rotationField = firstNonBlank(wrapper.getString("rotationField"), "key");
             final boolean rotationDirection = Boolean.parseBoolean(firstNonBlank(wrapper.getString("rotationDirection"), "true"));
-            final int maxItems = Integer.parseInt(firstNonBlank(wrapper.getString("maxItems"), "0"));
+            final int maxItems = Integer.parseInt(Objects.requireNonNull(firstNonBlank(wrapper.getString("maxItems"), "0")));
             return new RepositoryRotating<>(
                 provider.instance(
                     source,
@@ -121,22 +121,21 @@ extends RepositoryWrapper<Item, Key>
             return keys.length == 0 ? null : keys[0];
         }
 
-        private static String firstNonBlank(final String first, final String second, final String third)
+        private static String firstNonBlank(final String ...arguments)
         {
-            if (first != null && !first.isBlank())
+            for (String argument : arguments)
             {
-                return first.trim();
-            }
-            if (second != null && !second.isBlank())
-            {
-                return second.trim();
+                if (argument != null && !argument.isBlank())
+                {
+                    return argument.trim();
+                }
             }
             return null;
         }
     }
 
-    public static final class Loader
-    implements RepositoryFactoryLoader
+    public static final class Loader<Item extends Data<Key>, Key>
+    implements RepositoryFactoryLoader<Item, Key>
     {
         @Override
         public String kind()
@@ -145,9 +144,9 @@ extends RepositoryWrapper<Item, Key>
         }
 
         @Override
-        public RepositoryFactory load(final Environment environment)
+        public RepositoryFactory<Item, Key> load(final Environment environment)
         {
-            return new Factory();
+            return new Factory<>();
         }
     }
 }

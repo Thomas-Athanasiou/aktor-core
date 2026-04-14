@@ -5,14 +5,14 @@ import com.aktor.core.Repository;
 
 import java.util.Objects;
 
-public final class RepositoryProviderTyped<Item extends Data<Key>, Key>
+public class RepositoryHandle<Item extends Data<Key>, Key>
 {
-    private final RepositoryProvider provider;
+    private final RepositoryProvider<Item, Key> provider;
     private final Class<Item> itemType;
     private final Class<Key> keyType;
     private final RelationProviderResolver<Key> relationProviderResolver;
 
-    private RepositoryProviderTyped(
+    protected RepositoryHandle(
         final Configuration configuration,
         final Class<Item> itemType,
         final Class<Key> keyType,
@@ -20,20 +20,20 @@ public final class RepositoryProviderTyped<Item extends Data<Key>, Key>
         final Object... dependencies
     )
     {
-        this.provider = new RepositoryProvider(Objects.requireNonNull(configuration), dependencies);
+        this.provider = new RepositoryProvider<>(Objects.requireNonNull(configuration), dependencies);
         this.itemType = Objects.requireNonNull(itemType);
         this.keyType = Objects.requireNonNull(keyType);
         this.relationProviderResolver = Objects.requireNonNull(relationProviderResolver);
     }
 
-    public static <Item extends Data<Key>, Key> RepositoryProviderTyped<Item, Key> of(
+    public static <Item extends Data<Key>, Key> RepositoryHandle<Item, Key> of(
         final Configuration configuration,
         final Class<Item> itemType,
         final Class<Key> keyType,
         final Object... dependencies
     )
     {
-        return new RepositoryProviderTyped<>(
+        return new RepositoryHandle<>(
             configuration,
             itemType,
             keyType,
@@ -42,7 +42,7 @@ public final class RepositoryProviderTyped<Item extends Data<Key>, Key>
         );
     }
 
-    public static <Item extends Data<Key>, Key> RepositoryProviderTyped<Item, Key> of(
+    public static <Item extends Data<Key>, Key> RepositoryHandle<Item, Key> of(
         final Configuration configuration,
         final Class<Item> itemType,
         final Class<Key> keyType,
@@ -50,7 +50,7 @@ public final class RepositoryProviderTyped<Item extends Data<Key>, Key>
         final Object... dependencies
     )
     {
-        return new RepositoryProviderTyped<>(
+        return new RepositoryHandle<>(
             configuration,
             itemType,
             keyType,
@@ -61,15 +61,10 @@ public final class RepositoryProviderTyped<Item extends Data<Key>, Key>
 
     public Repository<Item, Key> repository(final String name)
     {
-        return provider.instance(
-            Objects.requireNonNull(name),
-            itemType,
-            keyType,
-            relationProviderResolver
-        );
+        return provider.instance(Objects.requireNonNull(name), itemType, keyType, relationProviderResolver);
     }
 
-    public RepositoryProvider provider()
+    public RepositoryProvider<Item, Key> provider()
     {
         return provider;
     }

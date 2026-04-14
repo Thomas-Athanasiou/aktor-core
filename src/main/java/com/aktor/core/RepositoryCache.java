@@ -115,11 +115,11 @@ extends RepositoryComposite<Item, Key>
         }
     }
 
-    public static final class Factory
-    implements RepositoryFactory
+    public static final class Factory<Item extends Data<Key>, Key>
+    implements RepositoryFactory<Item, Key>
     {
         @Override
-        public <Item extends Data<Key>, Key> Repository<Item, Key> createTyped(
+        public Repository<Item, Key> create(
             final FactoryContext context,
             final RepositoryRequest<Item, Key> request
         )
@@ -147,9 +147,9 @@ extends RepositoryComposite<Item, Key>
             final Configuration entities = configuration.getConfiguration("entity");
             if (entities.has(name))
             {
-                return entities.getConfiguration(name).getConfiguration("aggregate");
+                return entities.getConfiguration(name).getConfiguration("cache");
             }
-            return configuration.getConfiguration(name).getConfiguration("aggregate");
+            return configuration.getConfiguration(name).getConfiguration("cache");
         }
 
         private static int cacheWriteSourceCount(final Configuration cache)
@@ -170,8 +170,8 @@ extends RepositoryComposite<Item, Key>
         }
     }
 
-    public static final class Loader
-    implements RepositoryFactoryLoader
+    public static final class Loader<Item extends Data<Key>, Key>
+    implements RepositoryFactoryLoader<Item, Key>
     {
         @Override
         public String kind()
@@ -180,9 +180,9 @@ extends RepositoryComposite<Item, Key>
         }
 
         @Override
-        public RepositoryFactory load(final Environment environment)
+        public RepositoryFactory<Item, Key> load(final Environment environment)
         {
-            return new Factory();
+            return new Factory<>();
         }
     }
 }

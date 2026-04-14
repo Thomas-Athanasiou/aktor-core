@@ -13,8 +13,8 @@ public abstract class RepositoryComposite<Item extends Data<Key>, Key>
 implements Repository<Item, Key>
 {
     private final List<Repository<Item, Key>> repositories;
-    private volatile List<Repository<Item, Key>> transactionParticipantSource;
-    private volatile List<TransactionParticipant> transactionParticipants;
+    private volatile List<Repository<Item, Key>> transactionParticipantSource = null;
+    private volatile List<TransactionParticipant> transactionParticipants = null;
 
     protected RepositoryComposite(final List<Repository<Item, Key>> repositoryList)
     {

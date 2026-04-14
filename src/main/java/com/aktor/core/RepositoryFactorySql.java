@@ -16,8 +16,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public final class RepositoryFactorySql
-implements RepositoryFactory
+public final class RepositoryFactorySql<Item extends Data<Key>, Key>
+implements RepositoryFactory<Item, Key>
 {
     private final Connection connection;
 
@@ -27,7 +27,7 @@ implements RepositoryFactory
     }
 
     @Override
-    public <Item extends Data<Key>, Key> Repository<Item, Key> createTyped(
+    public Repository<Item, Key> create(
         final FactoryContext context,
         final RepositoryRequest<Item, Key> request
     )
@@ -51,8 +51,8 @@ implements RepositoryFactory
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    private <Item extends Data<Key>, Key> Repository<Item, Key> relationRepository(
-        final RepositoryProvider provider,
+    private Repository<Item, Key> relationRepository(
+        final FactoryContext provider,
         final String name,
         final Class<Item> itemType
     )
@@ -63,7 +63,7 @@ implements RepositoryFactory
         fields.put("mainKey", "main_key");
         fields.put("foreignKey", "foreign_key");
         final FieldResolver fieldResolver = FieldResolver.mapped((Class) Relation.class, fields);
-        return (Repository<Item, Key>) RepositorySql.of(
+        return RepositorySql.of(
             connection,
             (Class) Relation.class,
             table,
@@ -100,8 +100,8 @@ implements RepositoryFactory
         return configuration.getConfiguration(name);
     }
 
-    public static final class Loader
-    implements RepositoryFactoryLoader
+    public static final class Loader<Item extends Data<Key>, Key>
+    implements RepositoryFactoryLoader<Item, Key>
     {
         @Override
         public String kind()
@@ -110,9 +110,9 @@ implements RepositoryFactory
         }
 
         @Override
-        public RepositoryFactory load(final Environment environment)
+        public RepositoryFactory<Item, Key> load(final Environment environment)
         {
-            return new RepositoryFactorySql(environment.require(Connection.class));
+            return new RepositoryFactorySql<>(environment.require(Connection.class));
         }
     }
 }

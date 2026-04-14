@@ -10,6 +10,8 @@ import com.aktor.core.model.ManagementFactory;
 import com.aktor.core.model.ManagementFactoryLoader;
 import com.aktor.core.model.ManagementProvider;
 import com.aktor.core.model.ManagementRequest;
+import com.aktor.core.model.RepositoryFactory;
+import com.aktor.core.model.RepositoryRequest;
 import com.aktor.core.model.RelationBinding;
 import com.aktor.core.model.RelationCyclePolicy;
 import com.aktor.core.model.RelationCardinalityPolicy;
@@ -39,12 +41,13 @@ implements ManagementFactory
         }
 
         final RelationProviderResolver<Key> relationProviderResolver = builder.build();
-        final Repository<Item, Key> repository = Objects.requireNonNull(provider).repository(
+        final RepositoryRequest<Item, Key> repositoryRequest = RepositoryFactory.request(
             Objects.requireNonNull(request.name()),
             Objects.requireNonNull(request.itemType()),
             Objects.requireNonNull(request.keyType()),
             relationProviderResolver
         );
+        final Repository<Item, Key> repository = Objects.requireNonNull(provider).<Item, Key>repositories().instance(repositoryRequest);
 
         return new ManagementRepository<>(repository, new RelationProcessor<>(relationProviderResolver));
     }
@@ -84,10 +87,13 @@ implements ManagementFactory
             (Class) targetItemType.asSubclass(Data.class),
             (Class) targetKeyType
         );
-        final Repository relationRepository = provider.repository(
-            relationRepositoryName,
-            Relation.class,
-            String.class
+        final Repository relationRepository = provider.<Relation, String>repositories().instance(
+            RepositoryFactory.request(
+                relationRepositoryName,
+                Relation.class,
+                String.class,
+                new RelationProviderResolver<>()
+            )
         );
 
         return new RelationBinding(
