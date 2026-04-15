@@ -4,11 +4,13 @@ import com.aktor.core.exception.*;
 import com.aktor.core.model.CollectionProcessor;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 
 public abstract class RepositorySerialized<Item extends Data<Key>, Key>
+extends SearchExecutorRelational<Item, Key>
 implements Repository<Item, Key>
 {
     private static final int BATCH_SIZE = 1024;
@@ -24,9 +26,7 @@ implements Repository<Item, Key>
 
     private final Converter<Item, String> serializer;
 
-    private final Converter<String, Item> deserializer;
-
-    private final CollectionProcessor<Item, Key> processor;
+    final Converter<String, Item> deserializer;
 
     protected RepositorySerialized(
         final Converter<Item, String> serializer,
@@ -35,10 +35,9 @@ implements Repository<Item, Key>
         final int batchSize
     )
     {
-        super();
+        super(processor);
         this.serializer = Objects.requireNonNull(serializer);
         this.deserializer = Objects.requireNonNull(deserializer);
-        this.processor = Objects.requireNonNull(processor);
         this.batchSize = batchSize;
     }
 
@@ -49,19 +48,6 @@ implements Repository<Item, Key>
     )
     {
         this(serializer, deserializer, processor, BATCH_SIZE);
-    }
-
-    @Override
-    public SearchResult<Item> search(final SearchCriteria searchCriteria) throws SearchException
-    {
-        try
-        {
-            return processor.process(iterateAllItems(getAllData()), searchCriteria);
-        }
-        catch (final DeserializationRuntimeException exception)
-        {
-            throw new SearchException(exception.getCause());
-        }
     }
 
     @Override
@@ -123,6 +109,30 @@ implements Repository<Item, Key>
         return result;
     }
 
+    private Iterable<Item> loadItems() throws SearchException
+    {
+        try
+        {
+            return iterateAllItems(getAllData());
+        }
+        catch (final DeserializationRuntimeException exception)
+        {
+            throw new SearchException(exception.getCause());
+        }
+    }
+
+    @Override
+    protected SearchSource<Item, Key> searchSource(final SearchCriteria searchCriteria) throws SearchException
+    {
+        return this::loadItems;
+    }
+
+    @Override
+    protected SearchResult<Item> searchNative(final SearchCriteria searchCriteria) throws SearchException
+    {
+        return search(searchCriteria, searchSource(searchCriteria));
+    }
+
     protected final List<String> snapshotData(
         final Iterable<String> keys,
         final int from,
@@ -169,9 +179,9 @@ implements Repository<Item, Key>
 
     private Iterable<Item> iterateAllItems(final Iterable<String> data)
     {
-        return () -> new java.util.Iterator<>()
+        return () -> new Iterator<>()
         {
-            private final java.util.Iterator<String> iterator = data.iterator();
+            private final Iterator<String> iterator = data.iterator();
 
             @Override
             public boolean hasNext()

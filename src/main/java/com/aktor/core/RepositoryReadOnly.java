@@ -13,7 +13,7 @@ import com.aktor.core.exception.SaveException;
 import java.util.Objects;
 
 public class RepositoryReadOnly<Item extends Data<Key>, Key>
-extends RepositoryWrapper<Item, Key>
+extends RepositoryFrame<Item, Key>
 {
     private final RepositoryReadOnlyMode mode;
 
@@ -22,7 +22,7 @@ extends RepositoryWrapper<Item, Key>
         final RepositoryReadOnlyMode mode
     )
     {
-        super(repository);
+        super(repository::get, repository::save, repository::delete, repository::search);
         this.mode = Objects.requireNonNull(mode);
     }
 

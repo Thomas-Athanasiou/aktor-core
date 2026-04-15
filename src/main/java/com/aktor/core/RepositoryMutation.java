@@ -9,7 +9,7 @@ import com.aktor.core.exception.SaveException;
 import java.util.Objects;
 
 public class RepositoryMutation<Item extends Data<Key>, Key>
-extends RepositoryWrapper<Item, Key>
+extends RepositoryFrame<Item, Key>
 {
     private final Repository<Item, Key> snapshotRepository;
 
@@ -33,7 +33,7 @@ extends RepositoryWrapper<Item, Key>
         final Converter<Mutation<Key, Item>, Mutation<Key, Item>> mutationConverter
     )
     {
-        super(repository);
+        super(repository::get, repository::save, repository::delete, repository::search);
         this.snapshotRepository = Objects.requireNonNull(snapshotRepository);
         this.mutationRepository = Objects.requireNonNull(mutationRepository);
         this.mutationConverter = Objects.requireNonNull(mutationConverter);

@@ -25,9 +25,11 @@ It defines:
 - typed data records through `Data<Key>`
 - record mapping through `Mapper`
 - field-to-storage mapping through `FieldResolver`
-- repository contracts through `Repository`
+- repository capability contracts through `Search`, `Get`, `Save`, `Delete`, `Registry`, and `Repository`
 - SQL-backed core repository support through `RepositorySql`
 - repository composition through `RepositoryCache`, `RepositoryAggregate`, `RepositoryReadOnly`, and `RepositoryRotating`
+- repository delegation through `RepositoryFrame`
+- search execution through `SearchExecutor`, `SearchExecutorRelational`, and `SearchSource`
 - relation orchestration through `RelationBinding`, `RelationProvider`, `RelationProviderResolver`, and `RelationProcessor`
 - repository loading through `RepositoryProvider`
 - management loading through `ManagementProvider`
@@ -213,6 +215,44 @@ Repositories are the persistence mechanism underneath.
 `ManagementProvider` sits above it and builds managements from repositories, including nested managements for related entities.
 
 That split keeps repository loading focused on storage selection, while management loading owns relation orchestration.
+
+### 5. Search Is Split Into Capability And Execution Layers
+
+Search now follows a layered model:
+
+- `Search<Item, Key>` is the query capability
+- `Get<Item, Key>`, `Save<Item, Key>`, and `Delete<Item, Key>` model the CRUD capabilities
+- `Registry<Item, Key>` combines the CRUD capabilities
+- `Repository<Item, Key>` combines `Registry` with `Search`
+
+Repositories that only need to query can implement `Search` without also pretending to support writes.
+
+Shared search execution is split too:
+
+- `SearchExecutor` performs the final in-memory processing over a `SearchSource`
+- `SearchExecutorRelational` handles relational field paths and candidate sourcing
+- `SearchSource` provides the candidate items that the executor finalizes
+
+This allows repositories like SQL, SQLite, CSV, and serialized stores to share a common final search pipeline while still deciding how much work can be pushed down to the backend.
+
+It also means search can span multiple storage sources when relational fields need to be resolved across repository boundaries. In those cases the backend fetches candidates, then the shared search pipeline applies the final relational filtering and pagination.
+
+### 6. Relational Fields Can Be Flattened For Search
+
+`DataRowMapper` now recursively flattens nested `Data<?>` values into dotted field paths.
+
+That makes relational field access consistent across:
+- SQL-backed search
+- SQLite-backed search
+- in-memory collection processing
+
+Example path:
+- `exercise.target_reps`
+
+The relational search path can then:
+- fetch broad candidates without pagination when needed
+- strip non-relational filters before candidate fetch
+- apply relational filtering and final pagination in memory
 
 ## Relation Features
 

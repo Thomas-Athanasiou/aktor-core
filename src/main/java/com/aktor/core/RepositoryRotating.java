@@ -15,7 +15,7 @@ import java.util.Objects;
 import java.util.function.IntSupplier;
 
 public final class RepositoryRotating<Item extends Data<Key>, Key>
-extends RepositoryWrapper<Item, Key>
+extends RepositoryFrame<Item, Key>
 {
     private static final FilterGroup[] NO_FILTERS = new FilterGroup[0];
 
@@ -30,7 +30,7 @@ extends RepositoryWrapper<Item, Key>
         final boolean rotationDirection
     )
     {
-        super(repository);
+        super(repository::get, repository::save, repository::delete, repository::search);
         this.maxItemsSupplier = Objects.requireNonNull(maxItemsSupplier);
         this.sortOrders = new SortOrder[]
         {

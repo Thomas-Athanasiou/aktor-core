@@ -8,7 +8,7 @@ import com.aktor.core.model.Logger;
 import java.util.Objects;
 
 public class RepositoryLogger<Item extends Data<Key>, Key>
-extends RepositoryWrapper<Item, Key>
+extends RepositoryFrame<Item, Key>
 {
     private final Logger logger;
 
@@ -17,7 +17,7 @@ extends RepositoryWrapper<Item, Key>
         final Logger logger
     )
     {
-        super(repository);
+        super(repository::get, repository::save, repository::delete, repository::search);
         this.logger = Objects.requireNonNull(logger);
     }
 

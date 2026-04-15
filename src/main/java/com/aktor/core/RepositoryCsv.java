@@ -16,12 +16,12 @@ import java.util.Map;
 import java.util.Objects;
 
 public class RepositoryCsv<Item extends Data<Key>, Key>
+extends SearchExecutorRelational<Item, Key>
 implements Repository<Item, Key>
 {
     private final String keyField;
     private final Converter<Item, Row> serializer;
     private final Converter<Map<String, String>, Item> deserializer;
-    private final CollectionProcessor<Item, Key> processor;
     private final CsvReader reader;
     private final CsvWriter writer;
     private volatile CsvTableUtil.CsvTable cachedTable;
@@ -53,11 +53,10 @@ implements Repository<Item, Key>
         final CsvWriter writer
     )
     {
-        super();
+        super(Objects.requireNonNull(processor));
         this.keyField = Objects.requireNonNull(keyField);
         this.serializer = Objects.requireNonNull(serializer);
         this.deserializer = Objects.requireNonNull(deserializer);
-        this.processor = Objects.requireNonNull(processor);
         this.reader = Objects.requireNonNull(reader);
         this.writer = writer;
     }
@@ -86,23 +85,6 @@ implements Repository<Item, Key>
         catch (final Exception exception)
         {
             throw new GetException(exception);
-        }
-    }
-
-    @Override
-    public SearchResult<Item> search(final SearchCriteria searchCriteria) throws SearchException
-    {
-        try
-        {
-            return processor.process(loadItems(), searchCriteria);
-        }
-        catch (final SearchException exception)
-        {
-            throw exception;
-        }
-        catch (final Exception exception)
-        {
-            throw new SearchException(exception);
         }
     }
 
@@ -157,14 +139,37 @@ implements Repository<Item, Key>
         }
     }
 
-    private List<Item> loadItems() throws ConversionException
+    private List<Item> loadItems() throws SearchException
     {
-        final List<Item> items = new ArrayList<>();
-        for (final Map<String, String> row : loadTable().rows())
+        try
         {
-            items.add(deserializer.convert(row));
+            final List<Item> items = new ArrayList<>();
+            for (final Map<String, String> row : loadTable().rows())
+            {
+                items.add(deserializer.convert(row));
+            }
+            return items;
         }
-        return items;
+        catch (final ConversionException exception)
+        {
+            throw new SearchException(exception);
+        }
+        catch (final Exception exception)
+        {
+            throw new SearchException(exception);
+        }
+    }
+
+    @Override
+    protected SearchSource<Item, Key> searchSource(final SearchCriteria searchCriteria) throws SearchException
+    {
+        return this::loadItems;
+    }
+
+    @Override
+    protected SearchResult<Item> searchNative(final SearchCriteria searchCriteria) throws SearchException
+    {
+        return search(searchCriteria, searchSource(searchCriteria));
     }
 
     private CsvTableUtil.CsvTable loadTable()

@@ -7,7 +7,7 @@ import com.aktor.core.exception.SaveException;
 import java.util.Objects;
 
 public class RepositoryEvent<Item extends Data<Key>, Key, EventItem extends Event<EventKey, EventTarget>, EventKey, EventTarget>
-extends RepositoryWrapper<Item, Key>
+extends RepositoryFrame<Item, Key>
 {
     private final Repository<EventItem, EventKey> eventRepository;
     private final Converter<Item, EventItem> eventConverter;
@@ -18,7 +18,7 @@ extends RepositoryWrapper<Item, Key>
         final Converter<Item, EventItem> eventConverter
     )
     {
-        super(repository);
+        super(repository::get, repository::save, repository::delete, repository::search);
         this.eventRepository = Objects.requireNonNull(eventRepository);
         this.eventConverter = Objects.requireNonNull(eventConverter);
     }

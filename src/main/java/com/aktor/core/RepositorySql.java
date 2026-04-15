@@ -7,6 +7,8 @@ import com.aktor.core.exception.SaveException;
 import com.aktor.core.exception.SearchException;
 import com.aktor.core.model.FieldResolver;
 import com.aktor.core.model.RelationProviderResolver;
+import com.aktor.core.model.CollectionProcessor;
+import com.aktor.core.model.SearchCriteriaCondition;
 import com.aktor.core.model.SqlDialect;
 import com.aktor.core.model.SqlDialectResolver;
 import com.aktor.core.model.TransactionParticipant;
@@ -23,6 +25,7 @@ import java.util.List;
 import java.util.Objects;
 
 public final class RepositorySql<Item extends Data<Key>, Key>
+extends SearchExecutorRelational<Item, Key>
 implements Repository<Item, Key>, TransactionParticipant
 {
     private static final String LOGICAL_KEY_FIELD_NAME = "key";
@@ -62,6 +65,7 @@ implements Repository<Item, Key>, TransactionParticipant
         final String fixedDeleteSql
     )
     {
+        super(new CollectionProcessor<>(new SearchCriteriaCondition(), serializer));
         this.connection = Objects.requireNonNull(connection);
         this.type = Objects.requireNonNull(type);
         this.serializer = Objects.requireNonNull(serializer);
@@ -171,19 +175,30 @@ implements Repository<Item, Key>, TransactionParticipant
     }
 
     @Override
-    public SearchResult<Item> search(final SearchCriteria searchCriteria) throws SearchException
+    protected SearchSource<Item, Key> searchSource(final SearchCriteria searchCriteria) throws SearchException
     {
-        if (searchCriteria == null)
+        return () -> loadCandidates(searchCriteria);
+    }
+
+    @Override
+    protected SearchResult<Item> searchNative(final SearchCriteria searchCriteria) throws SearchException
+    {
+        return new SearchResult<>(
+            loadCandidates(searchCriteria),
+            searchCriteria,
+            searchTotalCount(searchCriteria)
+        );
+    }
+
+    private List<Item> loadCandidates(final SearchCriteria searchCriteria) throws SearchException
+    {
+        final SearchCriteria safeSearchCriteria = Objects.requireNonNull(searchCriteria);
+        final List<Item> results = new ArrayList<>();
+        if (safeSearchCriteria.pageSize() > 0)
         {
-            throw new SearchException("Search criteria must not be null");
-        }
-        final int totalCount = searchTotalCount(searchCriteria);
-        final List<Item> results = new ArrayList<>(Math.min(totalCount, searchCriteria.pageSize()));
-        if (totalCount > 0)
-        {
-            try (final PreparedStatement statement = connection.prepareStatement(searchSerializer.convert(searchCriteria)))
+            try (final PreparedStatement statement = connection.prepareStatement(searchSerializer.convert(safeSearchCriteria)))
             {
-                bindSearchParameters(statement, searchCriteria);
+                bindSearchParameters(statement, safeSearchCriteria);
                 try (final ResultSet resultSet = statement.executeQuery())
                 {
                     while (resultSet.next())
@@ -197,7 +212,7 @@ implements Repository<Item, Key>, TransactionParticipant
                 throw new SearchException(exception);
             }
         }
-        return new SearchResult<>(results, searchCriteria, totalCount);
+        return results;
     }
 
     @Override

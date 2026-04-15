@@ -1,11 +1,15 @@
 package com.aktor.core;
 
 import com.aktor.core.exception.ConversionException;
+import com.aktor.core.exception.ModelException;
 import com.aktor.core.model.FieldNormalizer;
-import com.aktor.core.model.FieldResolver;
 import com.aktor.core.model.RecordTypePlan;
+import com.aktor.core.model.RelationCyclePolicy;
+import com.aktor.core.model.RelationTraversalContext;
 import com.aktor.core.util.SimpleDataObjectConverter;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 public final class DataRowMapper<Item extends Data<Key>, Key>
@@ -16,11 +20,6 @@ implements Converter<Item, Row>
     public DataRowMapper()
     {
         this(FieldNormalizer.DEFAULT);
-    }
-
-    public DataRowMapper(final Class<? extends Data<?>> type)
-    {
-        this(FieldResolver.mapped(type));
     }
 
     public DataRowMapper(final FieldNormalizer fieldResolver)
@@ -34,31 +33,98 @@ implements Converter<Item, Row>
         final Row row;
         try
         {
-            final Class<?> type = item.getClass();
-            final RecordTypePlan plan = RecordTypePlan.of(type);
-            final int size = plan.size();
-            final Value[] values = new Value[size];
-            int valueCount = 0;
-
-            for (int index = 0; index < size; index++)
-            {
-                final Object object = plan.readComponent(index, item);
-                if (object != null && isScalarComponent(type, plan.componentType(index)))
-                {
-                    values[valueCount++] = new Value(
-                        fieldResolver.resolve(plan.componentName(index)),
-                        SimpleDataObjectConverter.objectToString(object)
-                    );
-                }
-            }
-
-            row = Row.of(valueCount == size ? values : java.util.Arrays.copyOf(values, valueCount));
+            final List<Value> values = new ArrayList<>();
+            appendValues(values, item, "", RecordTypePlan.of(item.getClass()), new RelationTraversalContext());
+            row = Row.of(values);
         }
         catch (final IllegalArgumentException exception)
         {
             throw new ConversionException(exception);
         }
         return row;
+    }
+
+    private void appendValues(
+        final List<Value> values,
+        final Object item,
+        final String fieldPrefix,
+        final RecordTypePlan plan,
+        final RelationTraversalContext traversalContext
+    )
+    throws ConversionException
+    {
+        final Class<?> type = item.getClass();
+        final int size = plan.size();
+        for (int index = 0; index < size; index++)
+        {
+            final Object object = plan.readComponent(index, item);
+            if (object == null)
+            {
+                continue;
+            }
+
+            final String fieldName = fieldPrefix.isBlank()
+                ? fieldResolver.resolve(plan.componentName(index))
+                : fieldPrefix + "." + plan.componentSnakeName(index);
+            appendValue(
+                values,
+                fieldName,
+                object,
+                type,
+                plan.componentType(index),
+                traversalContext
+            );
+        }
+    }
+
+    private void appendValue(
+        final List<Value> values,
+        final String fieldName,
+        final Object object,
+        final Class<?> ownerType,
+        final Class<?> componentType,
+        final RelationTraversalContext traversalContext
+    ) throws ConversionException
+    {
+        if (object instanceof final Data<?> nestedItem)
+        {
+            try (RelationTraversalContext.Scope scope = traversalContext.enterRead(
+                nestedItem.getClass(),
+                nestedItem.key(),
+                fieldName,
+                RelationCyclePolicy.LINK_EXISTING
+            ))
+            {
+                if (!scope.linked())
+                {
+                    appendValues(
+                        values,
+                        nestedItem,
+                        fieldName,
+                        RecordTypePlan.of(nestedItem.getClass()),
+                        traversalContext
+                    );
+                }
+            }
+            catch (ModelException exception)
+            {
+                throw new ConversionException(exception);
+            }
+        }
+        else if (isScalarComponent(ownerType, componentType))
+        {
+            values.add(new Value(fieldName, SimpleDataObjectConverter.objectToString(object)));
+        }
+        else
+        {
+            throw new ConversionException(
+                "Unsupported non-scalar component type " + componentType.getName()
+                    + " in "
+                    + ownerType.getName()
+                    + " for field "
+                    + fieldName
+            );
+        }
     }
 
     private static boolean isScalarComponent(final Class<?> ownerType, final Class<?> componentType)

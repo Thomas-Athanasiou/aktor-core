@@ -17,13 +17,13 @@ public final class RelationTraversalContext
         super();
     }
 
-    Scope enterRead(final Class<?> type, final Object key, final String field, final RelationCyclePolicy policy)
+    public Scope enterRead(final Class<?> type, final Object key, final String field, final RelationCyclePolicy policy)
     throws ModelException
     {
         return enter(Operation.READ, type, key, field, policy);
     }
 
-    Scope enterSave(final Class<?> type, final Object key, final String field, final RelationCyclePolicy policy)
+    public Scope enterSave(final Class<?> type, final Object key, final String field, final RelationCyclePolicy policy)
     throws ModelException
     {
         return enter(Operation.SAVE, type, key, field, policy);
@@ -126,7 +126,7 @@ public final class RelationTraversalContext
         }
     }
 
-    static final class Scope
+    public static final class Scope
     implements AutoCloseable
     {
         private final RelationTraversalContext context;
@@ -141,7 +141,7 @@ public final class RelationTraversalContext
             this.linked = linked;
         }
 
-        boolean linked()
+        public boolean linked()
         {
             return linked;
         }
