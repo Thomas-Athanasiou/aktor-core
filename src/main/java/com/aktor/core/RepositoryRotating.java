@@ -69,11 +69,11 @@ extends RepositoryWrapper<Item, Key>
         }
     }
 
-    public static final class Factory<Item extends Data<Key>, Key>
-    implements RepositoryFactory<Item, Key>
+    public static final class Factory
+    implements RepositoryFactory
     {
         @Override
-        public Repository<Item, Key> create(
+        public <Item extends Data<Key>, Key> Repository<Item, Key> createTyped(
             final FactoryContext context,
             final RepositoryRequest<Item, Key> request
         )
@@ -89,9 +89,6 @@ extends RepositoryWrapper<Item, Key>
             {
                 throw new IllegalArgumentException("Wrapper source is required for repository: " + request.name());
             }
-            final String rotationField = firstNonBlank(wrapper.getString("rotationField"), "key");
-            final boolean rotationDirection = Boolean.parseBoolean(firstNonBlank(wrapper.getString("rotationDirection"), "true"));
-            final int maxItems = Integer.parseInt(Objects.requireNonNull(firstNonBlank(wrapper.getString("maxItems"), "0")));
             return new RepositoryRotating<>(
                 provider.instance(
                     source,
@@ -99,9 +96,9 @@ extends RepositoryWrapper<Item, Key>
                     request.keyType(),
                     request.relationProviderResolver()
                 ),
-                () -> maxItems,
-                rotationField,
-                rotationDirection
+                () -> Integer.parseInt(Objects.requireNonNull(firstNonBlank(wrapper.getString("maxItems"), "0"))),
+                firstNonBlank(wrapper.getString("rotationField"), "key"),
+                Boolean.parseBoolean(firstNonBlank(wrapper.getString("rotationDirection"), "true"))
             );
         }
 
@@ -134,8 +131,8 @@ extends RepositoryWrapper<Item, Key>
         }
     }
 
-    public static final class Loader<Item extends Data<Key>, Key>
-    implements RepositoryFactoryLoader<Item, Key>
+    public static final class Loader
+    implements RepositoryFactoryLoader
     {
         @Override
         public String kind()
@@ -144,9 +141,9 @@ extends RepositoryWrapper<Item, Key>
         }
 
         @Override
-        public RepositoryFactory<Item, Key> load(final Environment environment)
+        public RepositoryFactory load(final Environment environment)
         {
-            return new Factory<>();
+            return new Factory();
         }
     }
 }

@@ -5,30 +5,33 @@ import com.aktor.core.service.ManagementFactoryDirect;
 import com.aktor.core.service.ManagementFactoryRepository;
 import com.aktor.core.service.Management;
 
+import java.util.List;
 import java.util.ServiceLoader;
 import java.util.Objects;
 
 public final class ManagementProvider
 extends Provider<ManagementFactory>
 {
-    private final RepositoryProvider<?, ?> repositories;
+    private final RepositoryProvider repositories;
 
-    public ManagementProvider(final RepositoryProvider<?, ?> repositories)
+    public ManagementProvider(final RepositoryProvider repositories)
     {
         super(
             Objects.requireNonNull(repositories).configuration(),
             ManagementFactory.class,
             combineLoaders(
                 ServiceLoader.load(ManagementFactoryLoader.class),
-                new ManagementFactoryDirect.Loader(),
-                new ManagementFactoryRepository.Loader()
+                List.of(
+                    new ManagementFactoryDirect.Loader(),
+                    new ManagementFactoryRepository.Loader()
+                )
             ),
             repositories
         );
         this.repositories = repositories;
     }
 
-    public static ManagementProvider of(final RepositoryProvider<?, ?> repositories)
+    public static ManagementProvider of(final RepositoryProvider repositories)
     {
         return new ManagementProvider(repositories);
     }
@@ -48,10 +51,9 @@ extends Provider<ManagementFactory>
         return repositories.require(type);
     }
 
-    @SuppressWarnings("unchecked")
-    public <Item extends Data<Key>, Key> RepositoryProvider<Item, Key> repositories()
+    public RepositoryProvider repositories()
     {
-        return (RepositoryProvider<Item, Key>) repositories;
+        return repositories;
     }
 
     public <Item extends Data<Key>, Key> Management<Item, Key> management(

@@ -40,10 +40,9 @@ implements FactoryContext
         }
     }
 
-    @SafeVarargs
-    protected static <Type> Iterable<Loader<? extends Type>> combineLoaders(
+    protected static <Type> Iterable<? extends Loader<? extends Type>> combineLoaders(
         final Iterable<? extends Loader<? extends Type>> discovered,
-        final Loader<? extends Type>... fixed
+        final Iterable<? extends Loader<? extends Type>> fixed
     )
     {
         final Collection<Loader<? extends Type>> result = new ArrayList<>();

@@ -16,8 +16,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public final class RepositoryFactorySql<Item extends Data<Key>, Key>
-implements RepositoryFactory<Item, Key>
+public final class RepositoryFactorySql
+implements RepositoryFactory
 {
     private final Connection connection;
 
@@ -27,7 +27,7 @@ implements RepositoryFactory<Item, Key>
     }
 
     @Override
-    public Repository<Item, Key> create(
+    public <Item extends Data<Key>, Key> Repository<Item, Key> createTyped(
         final FactoryContext context,
         final RepositoryRequest<Item, Key> request
     )
@@ -35,7 +35,7 @@ implements RepositoryFactory<Item, Key>
         final RepositoryProvider provider = RepositoryFactory.requireProvider(context);
         if (Relation.class.isAssignableFrom(Objects.requireNonNull(request.itemType())))
         {
-            return relationRepository(provider, request.name(), request.itemType());
+            return relationRepository(provider, request.name());
         }
         if (!Record.class.isAssignableFrom(request.itemType()))
         {
@@ -51,10 +51,9 @@ implements RepositoryFactory<Item, Key>
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    private Repository<Item, Key> relationRepository(
+    private <Item extends Data<Key>, Key> Repository<Item, Key> relationRepository(
         final FactoryContext provider,
-        final String name,
-        final Class<Item> itemType
+        final String name
     )
     {
         final String table = table(provider.configuration(), name);
@@ -100,8 +99,8 @@ implements RepositoryFactory<Item, Key>
         return configuration.getConfiguration(name);
     }
 
-    public static final class Loader<Item extends Data<Key>, Key>
-    implements RepositoryFactoryLoader<Item, Key>
+    public static final class Loader
+    implements RepositoryFactoryLoader
     {
         @Override
         public String kind()
@@ -110,9 +109,9 @@ implements RepositoryFactory<Item, Key>
         }
 
         @Override
-        public RepositoryFactory<Item, Key> load(final Environment environment)
+        public RepositoryFactory load(final Environment environment)
         {
-            return new RepositoryFactorySql<>(environment.require(Connection.class));
+            return new RepositoryFactorySql(environment.require(Connection.class));
         }
     }
 }
