@@ -10,7 +10,7 @@ import java.util.Objects;
 import java.util.function.Function;
 
 public abstract class RepositorySerialized<Item extends Data<Key>, Key>
-extends SearchExecutorRelational<Item, Key>
+extends SearchExecutor<Item, Key>
 implements Repository<Item, Key>
 {
     private static final int BATCH_SIZE = 1024;
@@ -94,6 +94,12 @@ implements Repository<Item, Key>
         removeFromPath(getDataKey(item.key()));
     }
 
+    @Override
+    protected SearchSource<Item, Key> source()
+    {
+        return this::loadItems;
+    }
+
     protected List<String> getAllData() throws SearchException
     {
         final List<String> result = new ArrayList<>();
@@ -119,18 +125,6 @@ implements Repository<Item, Key>
         {
             throw new SearchException(exception.getCause());
         }
-    }
-
-    @Override
-    protected SearchSource<Item, Key> searchSource(final SearchCriteria searchCriteria) throws SearchException
-    {
-        return this::loadItems;
-    }
-
-    @Override
-    protected SearchResult<Item> searchNative(final SearchCriteria searchCriteria) throws SearchException
-    {
-        return search(searchCriteria, searchSource(searchCriteria));
     }
 
     protected final List<String> snapshotData(

@@ -29,7 +29,8 @@ It defines:
 - SQL-backed core repository support through `RepositorySql`
 - repository composition through `RepositoryCache`, `RepositoryAggregate`, `RepositoryReadOnly`, and `RepositoryRotating`
 - repository delegation through `RepositoryFrame`
-- search execution through `SearchExecutor`, `SearchExecutorRelational`, and `SearchSource`
+- search execution through `SearchExecutor` and `SearchSource`
+- relation-aware search orchestration through `ManagementRelational`
 - relation orchestration through `RelationBinding`, `RelationProvider`, `RelationProviderResolver`, and `RelationProcessor`
 - repository loading through `RepositoryProvider`
 - management loading through `ManagementProvider`
@@ -230,7 +231,6 @@ Repositories that only need to query can implement `Search` without also pretend
 Shared search execution is split too:
 
 - `SearchExecutor` performs the final in-memory processing over a `SearchSource`
-- `SearchExecutorRelational` handles relational field paths and candidate sourcing
 - `SearchSource` provides the candidate items that the executor finalizes
 
 This allows repositories like SQL, SQLite, CSV, and serialized stores to share a common final search pipeline while still deciding how much work can be pushed down to the backend.
@@ -252,7 +252,7 @@ Example path:
 The relational search path can then:
 - fetch broad candidates without pagination when needed
 - strip non-relational filters before candidate fetch
-- apply relational filtering and final pagination in memory
+- apply relational filtering and final pagination in memory through `ManagementRelational`
 
 ## Relation Features
 

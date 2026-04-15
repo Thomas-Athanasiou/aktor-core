@@ -1,11 +1,14 @@
 package com.aktor.core.service;
 
 import com.aktor.core.Data;
+import com.aktor.core.DataRowMapper;
 import com.aktor.core.Repository;
 import com.aktor.core.data.Relation;
+import com.aktor.core.model.CollectionProcessor;
 import com.aktor.core.model.Configuration;
 import com.aktor.core.model.Environment;
 import com.aktor.core.model.FactoryContext;
+import com.aktor.core.model.FieldResolver;
 import com.aktor.core.model.ManagementFactory;
 import com.aktor.core.model.ManagementFactoryLoader;
 import com.aktor.core.model.ManagementProvider;
@@ -20,6 +23,7 @@ import com.aktor.core.model.RelationProcessor;
 import com.aktor.core.model.RelationProviderResolver;
 import com.aktor.core.model.RelationSavePolicy;
 import com.aktor.core.model.RelationStoragePolicy;
+import com.aktor.core.model.SearchCriteriaCondition;
 
 import java.util.Objects;
 
@@ -48,22 +52,31 @@ implements ManagementFactory
             relationProviderResolver
         );
         final Repository<Item, Key> repository = Objects.requireNonNull(provider).<Item, Key>repositories().instance(repositoryRequest);
-
-        return new ManagementRepository<>(repository, new RelationProcessor<>(relationProviderResolver));
+        return new ManagementRepository<>(
+            repository,
+            new RelationProcessor<>(relationProviderResolver),
+            new CollectionProcessor<>(
+                new SearchCriteriaCondition(),
+                new DataRowMapper<>(FieldResolver.mapped(request.itemType()))
+            )
+        );
     }
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    private RelationBinding relationBinding(
+    private <MainKey, ForeignKey, ForeignData extends Data<ForeignKey>> RelationBinding<MainKey, ForeignKey, ForeignData> relationBinding(
         final ManagementProvider provider,
         final String entityName,
         final String field,
         final Configuration relation
     )
     {
-        final String targetName = requireConfiguration(relation, "target", "relation target");
+        final String targetName = requireTargetName(relation);
         final Configuration targetEntity = entity(provider.configuration(), targetName);
-        final Class<?> targetItemType = requireClass(targetEntity.getString("type"), targetName + ".type");
-        final Class<?> targetKeyType = requireClass(targetEntity.getString("keyType"), targetName + ".keyType");
+        final Class<ForeignData> targetItemType = dataClass(
+            requireClass(targetEntity.getString("type"), targetName + ".type")
+        );
+        final Class<ForeignKey> targetKeyType = classOf(
+            requireClass(targetEntity.getString("keyType"), targetName + ".keyType")
+        );
         final String relationRepositoryName = relationRepositoryName(entityName, field, relation);
         final String mainField = firstNonBlank(relation.getString("mainField"), "main_key");
         final String foreignField = firstNonBlank(relation.getString("foreignField"), "foreign_key");
@@ -82,25 +95,25 @@ implements ManagementFactory
         final RelationSavePolicy savePolicy = enumValue(relation.getString("savePolicy"), RelationSavePolicy.CASCADE);
         final RelationDeletePolicy deletePolicy = enumValue(relation.getString("deletePolicy"), RelationDeletePolicy.CASCADE);
 
-        final Management<?, ?> targetManagement = provider.management(
+        final Management<ForeignData, ForeignKey> targetManagement = provider.management(
             targetName,
-            (Class) targetItemType.asSubclass(Data.class),
-            (Class) targetKeyType
+            targetItemType,
+            targetKeyType
         );
-        final Repository relationRepository = provider.<Relation, String>repositories().instance(
+        final Repository<Relation<MainKey, ForeignKey>, String> relationRepository = provider.repositories().instance(
             RepositoryFactory.request(
                 relationRepositoryName,
-                Relation.class,
+                relationClass(),
                 String.class,
                 new RelationProviderResolver<>()
             )
         );
 
-        return new RelationBinding(
+        return new RelationBinding<>(
             field,
-            (Class) targetItemType.asSubclass(Data.class),
-            (Management) targetManagement,
-            (Repository) relationRepository,
+            targetItemType,
+            targetManagement,
+            relationRepository,
             Relation::new,
             mainField,
             foreignField,
@@ -131,23 +144,37 @@ implements ManagementFactory
         return firstNonBlank(relation.getString("repository"), entityName + "." + field + ".relation");
     }
 
-    private static String requireConfiguration(
-        final Configuration configuration,
-        final String key,
-        final String label
-    )
+    private static String requireTargetName(final Configuration configuration)
     {
-        final String value = configuration.getString(key);
+        final String value = configuration.getString("target");
         if (value == null)
         {
-            throw new IllegalArgumentException(label + " is required");
+            throw new IllegalArgumentException("relation target" + " is required");
         }
         final String trimmed = value.trim();
         if (trimmed.isEmpty())
         {
-            throw new IllegalArgumentException(label + " cannot be blank");
+            throw new IllegalArgumentException("relation target" + " cannot be blank");
         }
         return trimmed;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <Type> Class<Type> classOf(final Class<?> type)
+    {
+        return (Class<Type>) type;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <MainKey, ForeignKey> Class<Relation<MainKey, ForeignKey>> relationClass()
+    {
+        return (Class<Relation<MainKey, ForeignKey>>) (Class<?>) Relation.class;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <Type extends Data<?>> Class<Type> dataClass(final Class<?> type)
+    {
+        return (Class<Type>) type.asSubclass(Data.class);
     }
 
     private static Class<?> requireClass(final String className, final String label)

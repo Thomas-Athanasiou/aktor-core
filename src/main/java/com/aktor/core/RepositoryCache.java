@@ -147,9 +147,27 @@ extends RepositoryComposite<Item, Key>
             final Configuration entities = configuration.getConfiguration("entity");
             if (entities.has(name))
             {
-                return entities.getConfiguration(name).getConfiguration("cache");
+                final Configuration entity = entities.getConfiguration(name);
+                if (entity.has("aggregate"))
+                {
+                    return entity.getConfiguration("aggregate");
+                }
+                if (entity.has("cache"))
+                {
+                    return entity.getConfiguration("cache");
+                }
+                return entity.getConfiguration("aggregate");
             }
-            return configuration.getConfiguration(name).getConfiguration("cache");
+            final Configuration entity = configuration.getConfiguration(name);
+            if (entity.has("aggregate"))
+            {
+                return entity.getConfiguration("aggregate");
+            }
+            if (entity.has("cache"))
+            {
+                return entity.getConfiguration("cache");
+            }
+            return entity.getConfiguration("aggregate");
         }
 
         private static int cacheWriteSourceCount(final Configuration cache)

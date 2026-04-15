@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.Objects;
 
 public class RepositoryCsv<Item extends Data<Key>, Key>
-extends SearchExecutorRelational<Item, Key>
+extends SearchExecutor<Item, Key>
 implements Repository<Item, Key>
 {
     private final String keyField;
@@ -59,6 +59,12 @@ implements Repository<Item, Key>
         this.deserializer = Objects.requireNonNull(deserializer);
         this.reader = Objects.requireNonNull(reader);
         this.writer = writer;
+    }
+
+    @Override
+    protected SearchSource<Item, Key> source()
+    {
+        return this::loadItems;
     }
 
     @Override
@@ -158,18 +164,6 @@ implements Repository<Item, Key>
         {
             throw new SearchException(exception);
         }
-    }
-
-    @Override
-    protected SearchSource<Item, Key> searchSource(final SearchCriteria searchCriteria) throws SearchException
-    {
-        return this::loadItems;
-    }
-
-    @Override
-    protected SearchResult<Item> searchNative(final SearchCriteria searchCriteria) throws SearchException
-    {
-        return search(searchCriteria, searchSource(searchCriteria));
     }
 
     private CsvTableUtil.CsvTable loadTable()

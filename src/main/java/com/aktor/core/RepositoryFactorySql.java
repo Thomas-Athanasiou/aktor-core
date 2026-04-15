@@ -105,7 +105,7 @@ implements RepositoryFactory
         @Override
         public String kind()
         {
-            return "sqlite";
+            return "jdbc";
         }
 
         @Override

@@ -5,16 +5,16 @@ import com.aktor.core.exception.DeleteException;
 import com.aktor.core.exception.GetException;
 import com.aktor.core.exception.SaveException;
 import com.aktor.core.exception.SearchException;
+import com.aktor.core.FilterGroup;
 import com.aktor.core.model.FieldResolver;
 import com.aktor.core.model.RelationProviderResolver;
-import com.aktor.core.model.CollectionProcessor;
-import com.aktor.core.model.SearchCriteriaCondition;
 import com.aktor.core.model.SqlDialect;
 import com.aktor.core.model.SqlDialectResolver;
 import com.aktor.core.model.TransactionParticipant;
 import com.aktor.core.model.TransactionOrchestrator;
 import com.aktor.core.util.CsvValuesUtil;
 import com.aktor.core.value.Filter;
+import com.aktor.core.SortOrder;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Objects;
 
 public final class RepositorySql<Item extends Data<Key>, Key>
-extends SearchExecutorRelational<Item, Key>
 implements Repository<Item, Key>, TransactionParticipant
 {
     private static final String LOGICAL_KEY_FIELD_NAME = "key";
@@ -65,7 +64,6 @@ implements Repository<Item, Key>, TransactionParticipant
         final String fixedDeleteSql
     )
     {
-        super(new CollectionProcessor<>(new SearchCriteriaCondition(), serializer));
         this.connection = Objects.requireNonNull(connection);
         this.type = Objects.requireNonNull(type);
         this.serializer = Objects.requireNonNull(serializer);
@@ -175,18 +173,15 @@ implements Repository<Item, Key>, TransactionParticipant
     }
 
     @Override
-    protected SearchSource<Item, Key> searchSource(final SearchCriteria searchCriteria) throws SearchException
+    public SearchResult<Item> search(final SearchCriteria searchCriteria) throws SearchException
     {
-        return () -> loadCandidates(searchCriteria);
-    }
-
-    @Override
-    protected SearchResult<Item> searchNative(final SearchCriteria searchCriteria) throws SearchException
-    {
+        final SearchCriteria safeSearchCriteria = searchCriteria == null
+            ? new SearchCriteria(new FilterGroup[0], Integer.MAX_VALUE, 1, new SortOrder[0])
+            : searchCriteria;
         return new SearchResult<>(
-            loadCandidates(searchCriteria),
-            searchCriteria,
-            searchTotalCount(searchCriteria)
+            loadCandidates(safeSearchCriteria),
+            safeSearchCriteria,
+            searchTotalCount(safeSearchCriteria)
         );
     }
 
