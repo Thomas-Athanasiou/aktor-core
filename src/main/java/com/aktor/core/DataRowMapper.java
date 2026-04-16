@@ -111,6 +111,10 @@ implements Converter<Item, Row>
                 throw new ConversionException(exception);
             }
         }
+        else if (componentType.isArray())
+        {
+            return;
+        }
         else if (isScalarComponent(ownerType, componentType))
         {
             values.add(new Value(fieldName, SimpleDataObjectConverter.objectToString(object)));
