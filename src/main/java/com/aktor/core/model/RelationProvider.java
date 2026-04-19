@@ -128,7 +128,7 @@ implements Model
         return single(key, new RelationTraversalContext());
     }
 
-    Data<?> single(final MainKey key, final RelationTraversalContext traversalContext) throws ModelException
+    public Data<?> single(final MainKey key, final RelationTraversalContext traversalContext) throws ModelException
     {
         final Data<?>[] items = many(key, traversalContext);
         return items.length > 0 ? items[0] : null;
@@ -139,7 +139,7 @@ implements Model
         return many(key, new RelationTraversalContext());
     }
 
-    Data<?>[] many(final MainKey key, final RelationTraversalContext traversalContext) throws ModelException
+    public Data<?>[] many(final MainKey key, final RelationTraversalContext traversalContext) throws ModelException
     {
         try
         {
@@ -441,12 +441,12 @@ implements Model
         );
     }
 
-    boolean usesInlineSingularRelationStorage()
+    public boolean usesInlineSingularRelationStorage()
     {
         return storagePolicy == RelationStoragePolicy.INLINE;
     }
 
-    RelationCyclePolicy cyclePolicy()
+    public RelationCyclePolicy cyclePolicy()
     {
         return cyclePolicy;
     }

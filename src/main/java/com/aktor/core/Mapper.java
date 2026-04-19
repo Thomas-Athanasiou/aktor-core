@@ -1,16 +1,13 @@
 package com.aktor.core;
 
 import com.aktor.core.exception.ConversionException;
-import com.aktor.core.exception.ModelException;
 import com.aktor.core.model.FieldResolver;
 import com.aktor.core.model.RecordTypePlan;
 import com.aktor.core.model.RelationProviderResolver;
 import com.aktor.core.model.RelationTraversalContext;
 import com.aktor.core.model.RowMappingContext;
-import com.aktor.core.model.ValueConverter;
 import com.aktor.core.util.RecordTypeUtil;
 
-import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Objects;
 
@@ -39,7 +36,7 @@ implements Converter<Map<String, String>, Item>
         final Class<? extends Data<Key>> itemType
     )
     {
-        this(Objects.requireNonNull(resolver), new ValueConverter<>(relationProviderResolver, resolveKeyType(itemType)), itemType);
+        this(Objects.requireNonNull(resolver), new ValueConverterRelational<>(relationProviderResolver, resolveKeyType(itemType)), itemType);
     }
 
     public Mapper(final FieldResolver resolver, final ValueConverter<Key> converter, final Class<? extends Data<Key>> type)
@@ -123,15 +120,17 @@ implements Converter<Map<String, String>, Item>
                     componentName,
                     componentSnakeName
                 );
-                arguments[index] = converter.convertComponent(
-                    context,
-                    traversalContext,
-                    componentName,
-                    componentSnakeName,
-                    componentTypes[index],
-                    resolved.rawValue(),
-                    key,
-                    resolved.field()
+                arguments[index] = converter.convert(
+                    new ValueConverter.Context<>(
+                        context,
+                        traversalContext,
+                        componentName,
+                        componentSnakeName,
+                        componentTypes[index],
+                        resolved.rawValue(),
+                        key,
+                        resolved.field()
+                    )
                 );
             }
 
@@ -139,7 +138,7 @@ implements Converter<Map<String, String>, Item>
             final Item created = (Item) plan.instantiate(arguments);
             item = created;
         }
-        catch (final RuntimeException | ReflectiveOperationException | ModelException exception)
+        catch (final RuntimeException | ReflectiveOperationException exception)
         {
             throw new ConversionException(exception);
         }

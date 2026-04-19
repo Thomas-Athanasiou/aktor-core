@@ -73,4 +73,64 @@ extends Provider<ManagementFactory>
             (safeName, context, safeRequest) -> ManagementFactory.of(this, safeName).createTyped(context, safeRequest)
         );
     }
+
+    public Management<?, ?> management(final String name)
+    {
+        final Configuration entity = entity(configuration(), Objects.requireNonNull(name));
+        final Class<?> itemType = requireClass(entity.getString("type"), name + ".type");
+        final Class<?> keyType = requireClass(entity.getString("keyType"), name + ".keyType");
+        return management(
+            name,
+            dataClass(itemType),
+            classOf(keyType)
+        );
+    }
+
+    private Configuration entity(final Configuration configuration, final String name)
+    {
+        final Configuration entities = configuration.getConfiguration("entity");
+        if (entities.has(name))
+        {
+            return entities.getConfiguration(name);
+        }
+        return configuration.getConfiguration(name);
+    }
+
+    private static Class<?> requireClass(final String className, final String label)
+    {
+        try
+        {
+            return Class.forName(requireName(className, label));
+        }
+        catch (final ClassNotFoundException exception)
+        {
+            throw new IllegalArgumentException("Unknown class for " + label + ": " + className, exception);
+        }
+    }
+
+    private static String requireName(final String value, final String label)
+    {
+        if (value == null)
+        {
+            throw new IllegalArgumentException(label + " is required");
+        }
+        final String trimmed = value.trim();
+        if (trimmed.isEmpty())
+        {
+            throw new IllegalArgumentException(label + " cannot be blank");
+        }
+        return trimmed;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <Type> Class<Type> classOf(final Class<?> type)
+    {
+        return (Class<Type>) type;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <Type extends Data<?>> Class<Type> dataClass(final Class<?> type)
+    {
+        return (Class<Type>) type.asSubclass(Data.class);
+    }
 }

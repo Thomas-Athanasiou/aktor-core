@@ -28,6 +28,8 @@ public final class RepositorySql<Item extends Data<Key>, Key>
 implements Repository<Item, Key>, TransactionParticipant
 {
     private static final String LOGICAL_KEY_FIELD_NAME = "key";
+    private static final FilterGroup[] FILTER_GROUPS = new FilterGroup[0];
+    private static final SortOrder[] SORT_ORDERS = new SortOrder[0];
 
     private final Connection connection;
     private final Class<? extends Data<?>> type;
@@ -176,7 +178,7 @@ implements Repository<Item, Key>, TransactionParticipant
     public SearchResult<Item> search(final SearchCriteria searchCriteria) throws SearchException
     {
         final SearchCriteria safeSearchCriteria = searchCriteria == null
-            ? new SearchCriteria(new FilterGroup[0], Integer.MAX_VALUE, 1, new SortOrder[0])
+            ? new SearchCriteria(FILTER_GROUPS, Integer.MAX_VALUE, 1, SORT_ORDERS)
             : searchCriteria;
         return new SearchResult<>(
             loadCandidates(safeSearchCriteria),
@@ -191,6 +193,14 @@ implements Repository<Item, Key>, TransactionParticipant
         final List<Item> results = new ArrayList<>();
         if (safeSearchCriteria.pageSize() > 0)
         {
+            try
+            {
+                ensureSchema();
+            }
+            catch (SQLException | ConversionException exception)
+            {
+                throw new SearchException(exception);
+            }
             try (final PreparedStatement statement = connection.prepareStatement(searchSerializer.convert(safeSearchCriteria)))
             {
                 bindSearchParameters(statement, safeSearchCriteria);
@@ -217,6 +227,7 @@ implements Repository<Item, Key>, TransactionParticipant
         {
             executeWithinTransaction(
                 () -> {
+                    ensureSchema();
                     if (upsertParser == null)
                     {
                         saveWithFallback(item);
