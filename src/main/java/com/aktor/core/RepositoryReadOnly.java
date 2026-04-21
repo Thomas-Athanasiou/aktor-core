@@ -54,17 +54,17 @@ extends RepositoryFrame<Item, Key>
         )
         {
             final RepositoryProvider provider = RepositoryFactory.requireProvider(context);
-            final Configuration wrapper = wrapper(provider.configuration(), request.name());
+            final Configuration wrapper = provider.configuration().entity(request.name()).getConfiguration("wrapper");
             final String source = firstNonBlank(
                 singleSource(wrapper.getConfiguration("sources")),
-                wrapper.getString("source"),
-                wrapper.getString("repository")
+                wrapper.optString("source", null),
+                wrapper.optString("repository", null)
             );
             if (source == null || source.isBlank())
             {
                 throw new IllegalArgumentException("Wrapper source is required for repository: " + request.name());
             }
-            final RepositoryReadOnlyMode mode = enumValue(wrapper.getString("mode"), RepositoryReadOnlyMode.THROW);
+            final RepositoryReadOnlyMode mode = enumValue(wrapper.optString("mode", null), RepositoryReadOnlyMode.THROW);
             return new RepositoryReadOnly<>(
                 provider.instance(
                     source,
@@ -74,16 +74,6 @@ extends RepositoryFrame<Item, Key>
                 ),
                 mode
             );
-        }
-
-        private static Configuration wrapper(final Configuration configuration, final String name)
-        {
-            final Configuration entities = configuration.getConfiguration("entity");
-            if (entities.has(name))
-            {
-                return entities.getConfiguration(name).getConfiguration("wrapper");
-            }
-            return configuration.getConfiguration(name).getConfiguration("wrapper");
         }
 
         private static String singleSource(final Configuration sources)

@@ -125,7 +125,7 @@ extends RepositoryComposite<Item, Key>
         )
         {
             final RepositoryProvider provider = RepositoryFactory.requireProvider(context);
-            final Configuration cache = cache(provider.configuration(), request.name());
+            final Configuration cache = aggregate(provider.configuration(), request.name());
             final Configuration sources = cache.getConfiguration("sources");
             final List<Repository<Item, Key>> repositories = new ArrayList<>();
             for (final String sourceName : sources.keys())
@@ -142,23 +142,9 @@ extends RepositoryComposite<Item, Key>
             return new RepositoryCache<>(repositories, cacheWriteSourceCount(cache));
         }
 
-        private static Configuration cache(final Configuration configuration, final String name)
+        private static Configuration aggregate(final Configuration configuration, final String name)
         {
-            final Configuration entities = configuration.getConfiguration("entity");
-            if (entities.has(name))
-            {
-                final Configuration entity = entities.getConfiguration(name);
-                if (entity.has("aggregate"))
-                {
-                    return entity.getConfiguration("aggregate");
-                }
-                if (entity.has("cache"))
-                {
-                    return entity.getConfiguration("cache");
-                }
-                return entity.getConfiguration("aggregate");
-            }
-            final Configuration entity = configuration.getConfiguration(name);
+            final Configuration entity = configuration.entity(name);
             if (entity.has("aggregate"))
             {
                 return entity.getConfiguration("aggregate");
@@ -172,11 +158,7 @@ extends RepositoryComposite<Item, Key>
 
         private static int cacheWriteSourceCount(final Configuration cache)
         {
-            final String value = cache.getString("cacheWriteSourceCount");
-            if (value == null || value.isBlank())
-            {
-                return 1;
-            }
+            final String value = cache.optString("cacheWriteSourceCount", "1");
             try
             {
                 return Math.max(0, Integer.parseInt(value.trim()));
