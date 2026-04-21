@@ -123,7 +123,7 @@ implements Repository<Item, Key>, TransactionParticipant
     {
         final FieldResolver safeFieldResolver = Objects.requireNonNull(fieldResolver);
         final SqlDialect sqlDialect = SqlDialectResolver.of(driver);
-        final DataRowMapper<Item, Key> dataRowMapper = new DataRowMapper<>(safeFieldResolver);
+        final DataRowMapper<Item, Key> dataRowMapper = new DataRowMapper<>(safeFieldResolver, false);
         final String keyFieldName = Objects.requireNonNull(safeFieldResolver.resolve(LOGICAL_KEY_FIELD_NAME));
         return new RepositorySql<>(
             connection,

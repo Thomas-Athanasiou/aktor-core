@@ -92,6 +92,7 @@ extends Provider<RepositoryFactory>
             List.of(
                 new RepositoryAggregate.Loader(),
                 new RepositoryCache.Loader(),
+                new com.aktor.core.RepositoryPrimaryFallback.Loader(),
                 new RepositoryReadOnly.Loader(),
                 new RepositoryRotating.Loader()
             )

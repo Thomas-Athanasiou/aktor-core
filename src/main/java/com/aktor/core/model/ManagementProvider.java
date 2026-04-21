@@ -4,15 +4,20 @@ import com.aktor.core.Data;
 import com.aktor.core.service.ManagementFactoryDirect;
 import com.aktor.core.service.ManagementFactoryRepository;
 import com.aktor.core.service.Management;
+import com.aktor.core.service.ManagementDelegate;
 
 import java.util.List;
 import java.util.ServiceLoader;
 import java.util.Objects;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class ManagementProvider
 extends Provider<ManagementFactory>
 {
     private final RepositoryProvider repositories;
+    private final Map<String, Management<?, ?>> managements = new ConcurrentHashMap<>();
+    private final Map<String, ManagementDelegate<?, ?>> pendingManagements = new ConcurrentHashMap<>();
 
     public ManagementProvider(final RepositoryProvider repositories)
     {
@@ -62,16 +67,40 @@ extends Provider<ManagementFactory>
         final Class<Key> keyType
     )
     {
-        final ManagementRequest<Item, Key> request = ManagementFactory.request(
-            Objects.requireNonNull(name),
-            Objects.requireNonNull(itemType),
-            Objects.requireNonNull(keyType)
-        );
-        return super.instance(
-            request.name(),
-            request,
-            (safeName, context, safeRequest) -> ManagementFactory.of(this, safeName).createTyped(context, safeRequest)
-        );
+        final String safeName = Objects.requireNonNull(name);
+        final Management<?, ?> existing = managements.get(safeName);
+        if (existing != null)
+        {
+            return cast(existing);
+        }
+        final ManagementDelegate<?, ?> pending = pendingManagements.get(safeName);
+        if (pending != null)
+        {
+            return cast(pending);
+        }
+
+        final ManagementDelegate<Item, Key> delegate = new ManagementDelegate<>();
+        pendingManagements.put(safeName, delegate);
+        try
+        {
+            final ManagementRequest<Item, Key> request = ManagementFactory.request(
+                safeName,
+                Objects.requireNonNull(itemType),
+                Objects.requireNonNull(keyType)
+            );
+            final Management<Item, Key> created = super.instance(
+                request.name(),
+                request,
+                (instanceName, context, safeRequest) -> ManagementFactory.of(this, instanceName).createTyped(context, safeRequest)
+            );
+            delegate.setDelegate(created);
+            managements.put(safeName, created);
+            return created;
+        }
+        finally
+        {
+            pendingManagements.remove(safeName);
+        }
     }
 
     public Management<?, ?> management(final String name)
@@ -132,5 +161,11 @@ extends Provider<ManagementFactory>
     private static <Type extends Data<?>> Class<Type> dataClass(final Class<?> type)
     {
         return (Class<Type>) type.asSubclass(Data.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <Item extends Data<Key>, Key> Management<Item, Key> cast(final Management<?, ?> management)
+    {
+        return (Management<Item, Key>) management;
     }
 }

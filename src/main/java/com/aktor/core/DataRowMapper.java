@@ -16,6 +16,7 @@ public final class DataRowMapper<Item extends Data<Key>, Key>
 implements Converter<Item, Row>
 {
     private final FieldNormalizer fieldResolver;
+    private final boolean flattenNestedData;
 
     public DataRowMapper()
     {
@@ -24,7 +25,13 @@ implements Converter<Item, Row>
 
     public DataRowMapper(final FieldNormalizer fieldResolver)
     {
+        this(fieldResolver, true);
+    }
+
+    public DataRowMapper(final FieldNormalizer fieldResolver, final boolean flattenNestedData)
+    {
         this.fieldResolver = Objects.requireNonNull(fieldResolver);
+        this.flattenNestedData = flattenNestedData;
     }
 
     @Override
@@ -88,6 +95,11 @@ implements Converter<Item, Row>
     {
         if (object instanceof final Data<?> nestedItem)
         {
+            if (!flattenNestedData)
+            {
+                values.add(new Value(fieldName, SimpleDataObjectConverter.objectToString(nestedItem.key())));
+                return;
+            }
             try (RelationTraversalContext.Scope scope = traversalContext.enterRead(
                 nestedItem.getClass(),
                 nestedItem.key(),
