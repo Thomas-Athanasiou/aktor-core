@@ -16,10 +16,19 @@ extends Provider<RepositoryFactory>
 {
     public RepositoryProvider(final Configuration configuration, final Object... dependencies)
     {
+        this(configuration, List.of(), dependencies);
+    }
+
+    public RepositoryProvider(
+        final Configuration configuration,
+        final Iterable<? extends Loader<? extends RepositoryFactory>> extraLoaders,
+        final Object... dependencies
+    )
+    {
         super(
             Objects.requireNonNull(configuration),
             RepositoryFactory.class,
-            loaders(),
+            loaders(extraLoaders),
             dependencies
         );
     }
@@ -30,6 +39,15 @@ extends Provider<RepositoryFactory>
     )
     {
         return new RepositoryProvider(configuration, dependencies);
+    }
+
+    public static RepositoryProvider of(
+        final Configuration configuration,
+        final Iterable<? extends Loader<? extends RepositoryFactory>> extraLoaders,
+        final Object... dependencies
+    )
+    {
+        return new RepositoryProvider(configuration, extraLoaders, dependencies);
     }
 
     public <Dependency> Dependency require(final Class<Dependency> type)
@@ -85,16 +103,21 @@ extends Provider<RepositoryFactory>
         return RepositoryFactory.of(this, name).createTyped(context, request);
     }
 
-    private static Iterable<? extends Loader<? extends RepositoryFactory>> loaders()
+    private static Iterable<? extends Loader<? extends RepositoryFactory>> loaders(
+        final Iterable<? extends Loader<? extends RepositoryFactory>> extraLoaders
+    )
     {
         return combineLoaders(
             ServiceLoader.load(RepositoryFactoryLoader.class),
-            List.of(
-                new RepositoryAggregate.Loader(),
-                new RepositoryCache.Loader(),
-                new com.aktor.core.RepositoryPrimaryFallback.Loader(),
-                new RepositoryReadOnly.Loader(),
-                new RepositoryRotating.Loader()
+            combineLoaders(
+                extraLoaders,
+                List.of(
+                    new RepositoryAggregate.Loader(),
+                    new RepositoryCache.Loader(),
+                    new com.aktor.core.RepositoryPrimaryFallback.Loader(),
+                    new RepositoryReadOnly.Loader(),
+                    new RepositoryRotating.Loader()
+                )
             )
         );
     }
