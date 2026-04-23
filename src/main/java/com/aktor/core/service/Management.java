@@ -7,6 +7,7 @@ import com.aktor.core.exception.SaveException;
 import com.aktor.core.exception.SearchException;
 
 public interface Management<Item extends Data<Key>, Key>
+extends Service
 {
     Item get(final Key key) throws GetException;
 
