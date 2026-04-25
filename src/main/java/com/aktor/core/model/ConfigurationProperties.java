@@ -25,6 +25,12 @@ implements Configuration
         this.properties = properties;
     }
 
+    public ConfigurationProperties(final Properties properties)
+    {
+        this.properties = new Properties();
+        this.properties.putAll(properties);
+    }
+
     @Override
     public String getString(final String key)
     {

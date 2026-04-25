@@ -102,10 +102,22 @@ implements RepositoryFactory
     public static final class Loader
     implements RepositoryFactoryLoader
     {
+        private final String kind;
+
+        public Loader()
+        {
+            this("jdbc");
+        }
+
+        public Loader(final String kind)
+        {
+            this.kind = Objects.requireNonNull(kind);
+        }
+
         @Override
         public String kind()
         {
-            return "jdbc";
+            return kind;
         }
 
         @Override
